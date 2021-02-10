@@ -1210,9 +1210,9 @@ def button(number):  # which button (and which menu) was pressed on touch
         menu = 4
 
 def pygame_svg(svg_file, color, size):
-    scale = None
+    scale = 0.667 #TODO figure out why we need scale to 2/3
     clip_from = None
-    fit_to = None
+    #fit_to = None
     format = 'RGBA'
 
     with open(svg_file, "r+") as f:
@@ -1225,11 +1225,11 @@ def pygame_svg(svg_file, color, size):
 
     svg = Parser.parse_file(tmpfillename)
 
-    scale = min((fit_to[0] / svg.width, fit_to[1] / svg.height)
-                if fit_to else ([scale if scale else 1] * 2))
-    width, height = size if size else (svg.width, svg.height)
-    surf_size = round(width * scale), round(height * scale)
-    buffer = Rasterizer().rasterize(svg, *surf_size, scale, *(clip_from if clip_from else 0, 0))
+    # scale = min((fit_to[0] / svg.width, fit_to[1] / svg.height)
+    #             if fit_to else ([scale if scale else 1] * 2))
+    # width, height = size if size else (svg.width, svg.height)
+    surf_size = round(size[0]), round(size[1])#round(width * scale), round(height * scale)
+    buffer = Rasterizer().rasterize(svg, *surf_size, scale)#, *(clip_from if clip_from else 0, 0))
     return  pygame.image.frombuffer(buffer, surf_size, format)
 
 
