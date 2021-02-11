@@ -4,13 +4,11 @@
 # Wenn enable_gpio auf True gesetzt wird, muss das Radio
 # mit root-Rechten gestartet werden (sudo)
 import urllib
-
 enable_gpio = False
 if enable_gpio:
     import RPi.GPIO as GPIO
 import pygame
 from pygame.locals import *
-import imlib
 from random import randint
 import json
 from operator import itemgetter
@@ -24,7 +22,7 @@ import re
 import shutil
 import socket
 import subprocess
-import mpd
+from mpd import MPDClient, CommandError, ConnectionError
 from svg import Rasterizer, Parser
 #pip install Cython
 #pip install pynanosvg
@@ -51,6 +49,8 @@ if not os.getenv("TSLIB_TSDEVICE"):
 Home = pwd.getpwuid(os.getuid()).pw_dir
 ConfigPath = os.path.join(Home, ".config")
 ConfigFile = os.path.join(ConfigPath, "newtron-radio.conf")
+#PlayListPath = "/var/lib/mpd/playlists"
+PlayListPath = os.path.expanduser("~/.config/mpd/playlists/")
 
 # Pfad zum Programmverzeichnis
 ScriptPath = os.path.dirname(__file__)
@@ -112,8 +112,10 @@ wlan_device = 'wlan0'
 
 ###### Playlistenmanagement ################################
 # Vollständiger Pfad zur mpd.conf
-mpd_config = '/etc/mpd.conf'
+mpd_config = os.path.expanduser('~/.mpdconf')
+#defaultplaylist = 'SWR3-Livestream'  # eine Playlist aus dem 'playlist_directory'
 defaultplaylist = 'Radio BOB!'  # eine Playlist aus dem 'playlist_directory'
+
 sort_playlists = True
 
 # Name der Datei in die die aktuelle Playliste
@@ -387,11 +389,11 @@ def draw_text(win, text, font, color, align='topleft', pos=(0, 0)):
 
 
 def mpd_connect(client):
-    return
     try:
-        client.connect("/var/run/mpd/socket", 6600)
+        #client.connect("/var/run/user/1000/mpd/socket", 6600)
+        client.connect("localhost", 6600)
         print( "connected using unix socket...")
-    except mpd.ConnectionError as e:
+    except ConnectionError as e:
         if str(e) == 'Already connected':
             print( 'trying to reconnect...')
             # Das folgende disconnect() schlägt fehl (broken pipe)
@@ -421,7 +423,9 @@ def mpd_connect(client):
             run_command("sudo service mpd restart", shell=True)
             pygame.time.wait(1500)
             mpd_connect(client)
-
+    # except: # catch *all* exceptions
+    #     e = sys.exc_info()[0]
+    #     print( "<p>Error: %s</p>" % e )
 
 def save_config():
     if not os.path.isdir(ConfigPath):
@@ -606,7 +610,7 @@ def get_skins():
 def init_playlists():
     global ScriptPath
     # default playlistdir - DO NOT CHANGE!
-    pl_dir = '/var/lib/mpd/playlists/'
+    pl_dir = PlayListPath
     pl_src = os.path.join(ScriptPath, 'playlists')
     # Versuche das mpd Playlisten Verzeichnis aus mpd.conf herauszulesen
     try:
@@ -615,12 +619,11 @@ def init_playlists():
                 if l.strip():
                     if l.strip().split()[0].lower() == 'playlist_directory':
                         pl_dir = l.strip().split()[1].strip("\'\"")
+        pl_dir = os.path.expanduser(pl_dir)
     except:
         print(( "mpd config file " + mpd_config + " not found, using defaults"))
 
     # Existieren Playlists? wenn nicht, kopiere welche ins mpd playlists-dir
-    #TODO
-    return
     if mpc.listplaylists() == []:
         print(( "copying some playlists to " + pl_dir))
         # Mache das mpd Playlisten Verzeichnis für den Benutzer schreibbar
@@ -668,8 +671,6 @@ def init_playlists():
 
 def get_playlists(dir='/'):
     entries = []
-    #TODO
-    return
     try:
         files = mpc.lsinfo(dir)
     except:
@@ -756,8 +757,7 @@ def set_playlist(index):
 
 def status_update(Info):
     # Zeitanzeige
-    return
-    Status = 'time'#mpc.status()
+    Status = mpc.status()
     try:
         Songtime = int(Info['time'])
         if Songtime == 0:
@@ -972,7 +972,7 @@ def button(number):  # which button (and which menu) was pressed on touch
     try:
         Status = mpc.status()
         Info = mpc.currentsong()
-    except mpd.CommandError:
+    except CommandError:
         return
 
     if menu == 1:  # Main Screen
@@ -1022,17 +1022,17 @@ def button(number):  # which button (and which menu) was pressed on touch
                     mpc.previous()
                 else:
                     mpc.play(int(Status['playlistlength']) - 1)
-            except mpd.CommandError:
+            except CommandError:
                 pass
         elif number == 6:  # next
             Dirty = True
             btn_update_flag = True
             try:
                 if int(Info['pos']) + 1 < int(Status['playlistlength']):
-                    next(mpc)
+                    mpc.next() #next(mpc)
                 else:
                     mpc.play(0)
-            except mpd.CommandError:
+            except CommandError:
                 pass
         elif number == 7:  # vol down
             vol = int(Status['volume'])
@@ -1458,9 +1458,9 @@ def show_weather(OWM_ID, OWM_KEY):
     icon = pygame.image.load(icon).convert_alpha()
     icon2 = pygame.image.load(icon2).convert_alpha()
     icon = pygame.transform.smoothscale(icon,
-                                        (ss_weather_win.get_height() * 8 / 16, ss_weather_win.get_height() * 8 / 16))
+                                        (round(ss_weather_win.get_height() * 8 / 16), round(ss_weather_win.get_height() * 8 / 16)))
     icon2 = pygame.transform.smoothscale(icon2,
-                                         (ss_weather_win.get_height() * 8 / 16, ss_weather_win.get_height() * 8 / 16))
+                                         (round(ss_weather_win.get_height() * 8 / 16), round(ss_weather_win.get_height() * 8 / 16)))
     fc_height = fc_height + status_font.get_height()
     screen.blit(icon, (ss_weather_win.get_width() / 4 - icon.get_width() / 2, fc_height))
     screen.blit(icon2, (ss_weather_win.get_width() * 3 / 4 - icon.get_width() / 2, fc_height))
@@ -1577,7 +1577,7 @@ def update_screen():  # Hauptfunktion
 
         if menu == 1:  # Main Screen
 
-            Info = "Node"#mpc.currentsong()
+            Info = mpc.currentsong()
 
             # ScrollText nur Aktualisieren, wenn sich der Stationsname geändert hat
             _old_Station = Station
@@ -1613,7 +1613,7 @@ def update_screen():  # Hauptfunktion
                 status_update_flag = True
 
             if btn_update_flag:
-                Status = 'stop'#mpc.status()
+                Status = mpc.status()
                 btn_update_flag = False
                 screen.fill(bg_color, btn_rect[9])
                 if bg_buf:
@@ -1842,22 +1842,23 @@ else:
     screen = pygame.display.set_mode(size, pygame.SRCALPHA)
 
 # Verbinde mit MPD
-mpc = mpd.MPDClient()
+mpc = MPDClient()
 mpc.timeout = 10
 mpc.idletimeout = None
-#mpd_connect(mpc)
-# try:
-#     mpc.update()
-# except:
-#     pass
-# if 'volume' in mpc.status():
-#     if int(mpc.status()['volume']) < 5:
-#         setvol(oldvol)
-# else:
-#     try:
-#         setvol(oldvol)
-#     except:
-#         print( "could not set volume - continuing anyway...")
+mpd_connect(mpc)
+try:
+    mpc.update()
+except:
+    pass
+status = mpc.status()
+if 'volume' in status:
+    if int(mpc.status()['volume']) < 5:
+        setvol(oldvol)
+else:
+    try:
+        setvol(oldvol)
+    except:
+        print( "could not set volume - continuing anyway...")
 
 # OpenWeatherMap Ortsdaten und Key
 # Falls eine Umgebungsvariable 'OWM_ID' existiert, nehme diese
@@ -2172,7 +2173,7 @@ try:
                 Refresh = True
                 Dirty = True
                 pygame.time.wait(1500)
-            except (mpd.ConnectionError, socket.error) as e:
+            except (ConnectionError, socket.error) as e:
                 print(('Connection Error (touch): ' + str(e)))
                 mpd_connect(mpc)
                 Refresh = True
@@ -2187,12 +2188,12 @@ try:
 
         try:
             update_screen()
-        except (mpd.ConnectionError, socket.error) as e:
+        except (ConnectionError, socket.error) as e:
             print(('Connection Error (update): ' + str(e)))
             mpd_connect(mpc)
             Refresh = True
             Dirty = True
-        except mpd.CommandError as e:
+        except CommandError as e:
             print(( 'CommandError (update): ' + str(e)))
             waiting('one output required!')
             pygame.time.wait(5000)
