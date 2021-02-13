@@ -1,36 +1,35 @@
 #!/usr/bin/python3
 # coding=utf-8
-
-# Wenn enable_gpio auf True gesetzt wird, muss das Radio
-# mit root-Rechten gestartet werden (sudo)
-import urllib
-enable_gpio = False
-if enable_gpio:
-    import RPi.GPIO as GPIO
-import pygame
-from pygame.locals import *
-from random import randint
-import json
-from operator import itemgetter
-
-import datetime
 import sys
+# print(sys.version)
 import os
+import datetime
 import pwd
 import grp
 import re
 import shutil
 import socket
-import subprocess
+import pygame
+import urllib
+
+from pygame.locals import *
+from random import randint
+import json
+from operator import itemgetter
 from mpd import MPDClient, CommandError, ConnectionError
 from svg import Rasterizer, Parser
-#pip install Cython
-#pip install pynanosvg
+# pip install Cython
+# pip install pynanosvg
+from builtins import (str, open, range,
+                      round, int, object)
 
-from builtins import (bytes, str, open, super, range,
-                      zip, round, input, int, pow, object)
+# Wenn enable_gpio auf True gesetzt wird, muss das Radio
+# mit root-Rechten gestartet werden (sudo)
+enable_gpio = False
+if enable_gpio:
+    import RPi.GPIO as GPIO
 
-##### Pfade und Environment ################################
+# -------- Pfade und Environment --------
 # Umgebungsvariablen für den Konsolenmodus
 
 if not os.getenv('SDL_FBDEV'):
@@ -49,13 +48,16 @@ if not os.getenv("TSLIB_TSDEVICE"):
 Home = pwd.getpwuid(os.getuid()).pw_dir
 ConfigPath = os.path.join(Home, ".config")
 ConfigFile = os.path.join(ConfigPath, "newtron-radio.conf")
-#PlayListPath = "/var/lib/mpd/playlists"
+# PlayListPath = "/var/lib/mpd/playlists"
 PlayListPath = os.path.expanduser("~/.config/mpd/playlists/")
 
 # Pfad zum Programmverzeichnis
 ScriptPath = os.path.dirname(__file__)
 
-##### Skin #################################################
+title_bar_text = 'NewTRON-Radio v3.0'
+icon_title_text = 'NewTRON-Radio'
+
+# -------- Skin --------
 # Zu verwendender Skin (default: 'Tron')
 # Mitgelieferte Skins: 'Tron', 'Copper' und 'Flat'
 skin = 'Tron'
@@ -63,7 +65,7 @@ skin = 'Tron'
 # Starte mit Hauptanzeige (menu = 1)
 menu = 1
 
-##### Bildschirm ###########################################
+# -------- Bildschirm --------
 # Bildschirmgrösse (fbcon)
 # nur setzen, wenn die Automatik nicht geht!
 # w=320
@@ -71,12 +73,12 @@ menu = 1
 
 # Bildschimgrösse (für X-Display)
 Showcursor = True
-Fullscreen = False
+fullscreen = False
 # X-Aufloesung, wenn Fullscreen = False
 x_w = 320
 x_h = 240
 
-##### Screensaver & Wetter ################################
+# -------- Screensaver & Wetter --------
 # OpenWeatherMap city-ID - gibt den Ort für die Wetterdaten an
 # Zu ermitteln über http://openweathermap.org
 OWM_ID = '2925533'  # Frankfurt
@@ -91,9 +93,10 @@ screensaver_mode = 'clock'
 screensaver_timer = 10  # in Minuten; Zeit bis Screensaver aktiv wird
 screensaver = False  # wenn True, starte mit aktiviertem Screensaver
 
-##### GPIO-Konfiguration fürs Backlight ####################
-# Normalerweise müssen im Programmcode selbst
+# -------- GPIO-Konfiguration fürs Backlight --------
 # noch weitere Anpassungen vorgenommen werden
+bl_on = None
+bl_off = None
 if enable_gpio:
     screensaver_mode = 'black'
     GPIO.setmode(GPIO.BCM)
@@ -105,15 +108,15 @@ if enable_gpio:
     else:
         GPIO.output(18, bl_on)
 
-###### W-LAN Device ########################################
+# -------- LAN Device --------
 # Welches device soll für die Empfangsstärkenanzeige
 # verwendet werden.
 wlan_device = 'wlan0'
 
-###### Playlistenmanagement ################################
+# -------- Playlistenmanagement --------
 # Vollständiger Pfad zur mpd.conf
 mpd_config = os.path.expanduser('~/.mpdconf')
-#defaultplaylist = 'SWR3-Livestream'  # eine Playlist aus dem 'playlist_directory'
+# defaultplaylist = 'SWR3-Livestream'  # eine Playlist aus dem 'playlist_directory'
 defaultplaylist = 'Radio BOB!'  # eine Playlist aus dem 'playlist_directory'
 
 sort_playlists = True
@@ -130,7 +133,7 @@ x_button = False
 # des aktuellen Verzeichnisses zur Playliste
 plus_button = True
 
-##### Diverse weitere Konfiguration ########################
+# -------- Diverse weitere Konfiguration --------
 
 # Default, wenn kein Font in skin.cfg angegeben ist
 skin_font = None
@@ -157,7 +160,15 @@ Dirty = True
 btn_update_flag = True
 status_update_flag = False
 pb_page = False
-
+status_color = None
+weather_font_color = None
+clock_font_color = 0
+wallpaper = None
+weather_wallpaper = None
+# not defined by purpose
+# w = None
+# h = None
+size = (42, 42)
 # Globale Variablen zum Speichern der alten Werte
 # um festzustellen, ob sich was geändert hat
 # Werden nur in "update_screen()" verwendet
@@ -172,13 +183,12 @@ oldvol = 80
 muted = False
 
 # Einstellungen fürs Eventhandling
+minutes = 0
+seconds = 0
 if screensaver:
     minutes = screensaver_timer
-else:
-    minutes = 0
-seconds = 0
 
-###### Farbmanagement ######################################
+# -------- Farbmanagement --------
 # colors     R    G    B
 white = (255, 255, 255)
 lgrey = (160, 160, 160)
@@ -212,7 +222,7 @@ mp3_color = mp3_green  # für Dateien
 rad_color = tron_blue  # für playlisten im playlists-dir
 err_color = red  # für Playlistauswahlfehler
 
-###### Touchbutton + Skin Dateien ##########################
+# -------- Touchbutton + Skin Dateien --------
 msg_frame = "Status.svg"
 btn_list = [
     "Stop.svg",
@@ -256,11 +266,12 @@ selection_frame = "Selection.svg"
 select_pl = "Playlist_msg.svg"
 
 
-##### Funktions- und Klassendefinitionen ###################
+# -------- Funktions- und Klassendefinitionen --------
 
 def run_command(cmd, shell):
-    print('The executed is {}.'  .format(cmd)  )
-    #subprocess.call(cmd, shell)
+    print('The executed is {}.'.format(cmd))
+    # subprocess.call(cmd, shell)
+
 
 def disp_init():  # (Automatische) Erkennung des Displays
     global w, h, size
@@ -271,12 +282,12 @@ def disp_init():  # (Automatische) Erkennung des Displays
         try:
             os.putenv('SDL_VIDEODRIVER', 'x11')
             pygame.display.init()
-            pygame.display.set_caption('NewTRON-Radio v2.x', 'NewTRON-Radio')
-            if (Showcursor):
+            pygame.display.set_caption(title_bar_text, icon_title_text)
+            if Showcursor:
                 pygame.mouse.set_visible(True)
             else:
                 pygame.mouse.set_cursor((8, 8), (4, 4), (0, 0, 0, 0, 0, 0, 0, 0), (0, 0, 0, 0, 0, 0, 0, 0))
-            if (Fullscreen):
+            if fullscreen:
                 info = pygame.display.Info()
                 w = info.current_w
                 h = info.current_h
@@ -285,41 +296,41 @@ def disp_init():  # (Automatische) Erkennung des Displays
                 h = x_h
             disp_found = True
         except:
-            print( 'Problem with X11-Driver!')
+            print('Problem with X11-Driver!')
             pygame.display.quit()
     elif os.getenv('SDL_VIDEODRIVER'):
-        print(( 'using ' + os.getenv('SDL_VIDEODRIVER') + ' from SDL_VIDEODRIVER env var.'))
+        print(('using ' + os.getenv('SDL_VIDEODRIVER') + ' from SDL_VIDEODRIVER env var.'))
         try:
             pygame.display.init()
             pygame.mouse.set_visible(False)
             disp_found = True
         except:
             e, v = sys.exc_info()[:2]
-            print(( str(e) + ': ' + str(v)))
+            print((str(e) + ': ' + str(v)))
 
-            print(( 'Driver ' + os.getenv('SDL_VIDEODRIVER') + ' from SDL_VIDEODRIVER env var failed!'))
-            print( 'Is your SDL_VIDEODRIVER entry correct?')
-            print( 'Also check:')
+            print(('Driver ' + os.getenv('SDL_VIDEODRIVER') + ' from SDL_VIDEODRIVER env var failed!'))
+            print('Is your SDL_VIDEODRIVER entry correct?')
+            print('Also check:')
             print(('SDL_FBDEV = ' + os.getenv('SDL_FBDEV')))
             print(('SDL_MOUSEDEV = ' + os.getenv('SDL_MOUSEDEV')))
             print(('SDL_MOUSEDRV = ' + os.getenv('SDL_MOUSEDRV')))
             print('Are theese correct? Set them in Line 30ff.')
             pygame.display.quit()
     else:
-        print( 'trying fbcon')
+        print('trying fbcon')
         os.putenv('SDL_VIDEODRIVER', 'fbcon')
         try:
             pygame.display.init()
             pygame.mouse.set_visible(False)
-            print(( 'using ' + pygame.display.get_driver()))
+            print(('using ' + pygame.display.get_driver()))
             disp_found = True
         except:
             e, v = sys.exc_info()[:2]
-            print(( str(e) + ': ' + str(v)))
+            print((str(e) + ': ' + str(v)))
 
             print('Driver fbcon failed!')
             print('Is libts/libts-bin installed?')
-            print( 'Also check:')
+            print('Also check:')
             print(('SDL_FBDEV = ' + os.getenv('SDL_FBDEV')))
             print(('SDL_MOUSEDEV = ' + os.getenv('SDL_MOUSEDEV')))
             print(('SDL_MOUSEDRV = ' + os.getenv('SDL_MOUSEDRV')))
@@ -341,7 +352,7 @@ def disp_init():  # (Automatische) Erkennung des Displays
 
 def reboot():
     screen.fill(bg_color)
-    reboot_label = title_font.render("Reboot...", 1, (font_color))
+    reboot_label = title_font.render("Reboot...", True, font_color)
     screen.blit(reboot_label,
                 reboot_label.get_rect(center=(w / 2, h / 2))
                 )
@@ -353,7 +364,7 @@ def reboot():
 
 def poweroff():
     screen.fill(bg_color)
-    poweroff_label = title_font.render("Shutdown...", 1, (font_color))
+    poweroff_label = title_font.render("Shutdown...", True, font_color)
     screen.blit(poweroff_label,
                 poweroff_label.get_rect(center=(w / 2, h / 2))
                 )
@@ -365,37 +376,37 @@ def poweroff():
 
 def waiting(msg_text1='please wait...', msg_text2=None):
     screen.fill(bg_color)
-    text_label = title_font.render(msg_text1, 1, (font_color))
-    if msg_text2 == None:
+    text_label = title_font.render(msg_text1, True, font_color)
+    if msg_text2 is None:
         screen.blit(text_label, text_label.get_rect(center=(w / 2, h / 2)))
     else:
         screen.blit(text_label, text_label.get_rect(center=(w / 2, h / 2 - text_label.get_height() / 2)))
-        text_label = title_font.render(msg_text2, 1, (font_color))
+        text_label = title_font.render(msg_text2, True, font_color)
         screen.blit(text_label, text_label.get_rect(center=(w / 2, h / 2 + text_label.get_height() / 2)))
     pygame.display.flip()
 
 
-def draw_text(win, text, font, color, align='topleft', pos=(0, 0)):
-    label = font.render(text, 1, color)
+def draw_text(win, text, text_font, color, align='topleft', pos=(0, 0)):
+    label = text_font.render(text, 1, color)
     label_pos = label.get_rect()
     if align == 'centerx':
         label_pos.centerx = win.get_rect().centerx
     if align == 'topright':
         label_pos.topright = win.get_rect().topright
     if dropshadow:
-        label_shadow = font.render(text, 1, shadow_color)
+        label_shadow = text_font.render(text, 1, shadow_color)
         win.blit(label_shadow, (label_pos[0] + pos[0] + 1, label_pos[1] + pos[1] + 1))
     win.blit(label, (label_pos[0] + pos[0], label_pos[1] + pos[1]))
 
 
 def mpd_connect(client):
     try:
-        #client.connect("/var/run/user/1000/mpd/socket", 6600)
+        # client.connect("/var/run/user/1000/mpd/socket", 6600)
         client.connect("localhost", 6600)
-        print( "connected using unix socket...")
+        print("connected using unix socket...")
     except ConnectionError as e:
         if str(e) == 'Already connected':
-            print( 'trying to reconnect...')
+            print('trying to reconnect...')
             # Das folgende disconnect() schlägt fehl (broken pipe)
             # obwohl von python_mpd2 'Already connected' gemeldet wurde
             # Aber erst ein auf das disconnect() folgender connect()
@@ -414,12 +425,12 @@ def mpd_connect(client):
             # Nötig, um einen 'service mpd restart' zu überstehen
             pygame.time.wait(1500)
             client.connect("localhost", 6600)
-            print( "connected using localhost:6600")
+            print("connected using localhost:6600")
         except:
             e, v = sys.exc_info()[:2]
-            #TODO fix print
-            #print(e + ': ' + v)
-            print( "restarting mpd...")
+            # TODO fix print
+            # print(e + ': ' + v)
+            print("restarting mpd...")
             run_command("sudo service mpd restart", shell=True)
             pygame.time.wait(1500)
             mpd_connect(client)
@@ -427,23 +438,24 @@ def mpd_connect(client):
     #     e = sys.exc_info()[0]
     #     print( "<p>Error: %s</p>" % e )
 
+
 def save_config():
     if not os.path.isdir(ConfigPath):
         try:
             os.mkdir(ConfigPath)
         except:
-            print(( 'Failed to create ' + ConfigPath))
+            print(('Failed to create ' + ConfigPath))
     with open(ConfigFile, 'w') as f:
         f.write('skin=' + skin + '\n')
         f.write('screensaver_mode=' + screensaver_mode + '\n')
         f.write('screensaver_timer=' + str(screensaver_timer) + '\n')
         f.write('x_button=' + str(x_button) + '\n')
         f.write('plus_button=' + str(plus_button) + '\n')
-        f.write('fullscreen=' + str(Fullscreen) + '\n')
+        f.write('fullscreen=' + str(fullscreen) + '\n')
 
 
 def read_config():
-    global skin, Fullscreen
+    global skin, fullscreen
     global screensaver_mode
     global screensaver_timer
     global x_button, plus_button
@@ -465,9 +477,9 @@ def read_config():
                         elif key == 'plus_button':
                             plus_button = eval(value)
                         elif key == 'fullscreen':
-                            Fullscreen = eval(value)
+                            fullscreen = eval(value)
     else:
-        print( 'No ConfigFile found, using defaults')
+        print('No ConfigFile found, using defaults')
 
 
 def get_config():
@@ -482,7 +494,7 @@ def get_config():
     else:
         chk_win[1].blit(chk_buf[0], (0, 0))
     draw_text(chk_win[1], ' Plus-Button', status_font, font_color, pos=(chk_buf[0].get_width(), 0))
-    if Fullscreen:
+    if fullscreen:
         chk_win[2].blit(chk_buf[1], (0, 0))
     else:
         chk_win[2].blit(chk_buf[0], (0, 0))
@@ -496,11 +508,11 @@ def get_config():
 
 def set_config(idx=None):
     global screensaver_mode
-    global x_button, plus_button, Fullscreen
+    global x_button, plus_button, fullscreen
     global Refresh
     if idx == 0: x_button = x_button ^ True
     if idx == 1: plus_button = plus_button ^ True
-    if idx == 2 or idx == 3: Fullscreen = Fullscreen ^ True
+    if idx == 2 or idx == 3: fullscreen = fullscreen ^ True
 
     if idx == 9:
         ss_mode = ['clock', 'weather', 'black', 'off']
@@ -533,10 +545,10 @@ def read_skin_config():
     if os.path.isfile(skin_config):
         # Setze Default-Fontgrössen, wenn ein Font angegeben wurde
         with open(skin_config) as f:
-            for l in f:
-                if len(l.split('=')) > 1:
-                    if l.strip().split('=')[0].lower().rstrip() == 'skin_font':
-                        value = l.strip().split('=')[1].split('#')[0].strip()
+            for line_skin_config in f:
+                if len(line_skin_config.split('=')) > 1:
+                    if line_skin_config.strip().split('=')[0].lower().rstrip() == 'skin_font':
+                        value = line_skin_config.strip().split('=')[1].split('#')[0].strip()
                         if value:
                             if os.path.isfile(value.strip("\'\"")):
                                 skin_font = value.strip("\'\"")
@@ -546,10 +558,10 @@ def read_skin_config():
                                 clock_font_size = h / 4
         # Lese den Rest der Konfiguration ein
         with open(skin_config) as f:
-            for l in f:
-                if len(l.split('=')) > 1:
-                    key = l.strip().split('=')[0].lower().rstrip()
-                    value = l.strip().split('=')[1].split('#')[0].strip()
+            for line_skin_config in f:
+                if len(line_skin_config.split('=')) > 1:
+                    key = line_skin_config.strip().split('=')[0].lower().rstrip()
+                    value = line_skin_config.strip().split('=')[1].split('#')[0].strip()
                     if value:
                         if key == 'font_color':
                             font_color = eval(value)
@@ -586,11 +598,12 @@ def read_skin_config():
                         elif key == 'dropshadow':
                             dropshadow = eval(value)
     else:
-        print( "No skin.cfg found. trying defaults...")
+        print("No skin.cfg found. trying defaults...")
+    font_size = round(font_size)
     font = pygame.font.Font(skin_font, font_size)
-    status_font = pygame.font.Font(skin_font, status_font_size)
-    title_font = pygame.font.Font(skin_font, title_font_size)
-    clock_font = pygame.font.Font(skin_font, clock_font_size)
+    status_font = pygame.font.Font(skin_font, round(status_font_size))
+    title_font = pygame.font.Font(skin_font, round(title_font_size))
+    clock_font = pygame.font.Font(skin_font, round(clock_font_size))
     if not status_color:
         status_color = font_color
     if not weather_font_color:
@@ -615,17 +628,17 @@ def init_playlists():
     # Versuche das mpd Playlisten Verzeichnis aus mpd.conf herauszulesen
     try:
         with open(mpd_config) as f:
-            for l in f:
-                if l.strip():
-                    if l.strip().split()[0].lower() == 'playlist_directory':
-                        pl_dir = l.strip().split()[1].strip("\'\"")
+            for mpd_config_line in f:
+                if mpd_config_line.strip():
+                    if mpd_config_line.strip().split()[0].lower() == 'playlist_directory':
+                        pl_dir = mpd_config_line.strip().split()[1].strip("\'\"")
         pl_dir = os.path.expanduser(pl_dir)
     except:
-        print(( "mpd config file " + mpd_config + " not found, using defaults"))
+        print(("mpd config file " + mpd_config + " not found, using defaults"))
 
     # Existieren Playlists? wenn nicht, kopiere welche ins mpd playlists-dir
-    if mpc.listplaylists() == []:
-        print(( "copying some playlists to " + pl_dir))
+    if not mpc.listplaylists():
+        print(("copying some playlists to " + pl_dir))
         # Mache das mpd Playlisten Verzeichnis für den Benutzer schreibbar
         scriptuserid = os.getuid()
         if not scriptuserid:  # Script läuft nicht als 'root'
@@ -647,15 +660,15 @@ def init_playlists():
                 for i in os.listdir(pl_src):
                     shutil.copy2(os.path.join(pl_src, i), pl_dir)
             else:
-                print(( "missing " + pl_dir + " or " + pl_src))
+                print(("missing " + pl_dir + " or " + pl_src))
             try:
                 mpc.update()
             except:
                 pass
         except:
             e, v = sys.exc_info()[:2]
-            print(( str(e) + ': ' + str(v)))
-            print( "failed to copy playlists!")
+            print((str(e) + ': ' + str(v)))
+            print("failed to copy playlists!")
 
     # Ist vielleicht eine Playlist im mpd 'state'-file
     if int(mpc.status()['playlistlength']) > 0:
@@ -683,14 +696,16 @@ def get_playlists(dir='/'):
     for i in range(len(files)):
         if 'directory' in files[i]:
             if files[i]['directory'][-4:].lower() == '.zip':
-                next  # zipfiles machen Probleme...
+                continue
+                # next  # zipfiles machen Probleme...
             else:
                 entries.append(['d', files[i]['directory'], dir_color])
         if 'playlist' in files[i]:
             if files[i]['playlist'][-4:].lower() == '.m3u':
                 entries.append(['p', files[i]['playlist'], pls_color])
             elif files[i]['playlist'][-4:].lower() == '.pls':
-                next  # .pls wird von mpd unter Raspbian nicht unterstützt
+                continue
+                # next  # .pls wird von mpd unter Raspbian nicht unterstützt
             else:
                 entries.append(['p', files[i]['playlist'], rad_color])
         if 'file' in files[i]:
@@ -705,7 +720,8 @@ def get_playlists(dir='/'):
         # entries.sort(key=lambda x: locale.strxfrm(str.lower(x[1])))
         # entries.sort(key=itemgetter(0))
         # bzw. in einer Zeile:
-        # entries = sorted(sorted(sorted(entries,key=itemgetter(1)),key=lambda x: locale.strxfrm(str.lower(x[1]))),key=itemgetter(0))
+        # entries = sorted(sorted(sorted(entries,key=itemgetter(1)),
+        #                   key=lambda x: locale.strxfrm(str.lower(x[1]))),key=itemgetter(0))
     return entries
 
 
@@ -749,23 +765,23 @@ def set_playlist(index):
             return False
     except:
         e, v = sys.exc_info()[:2]
-        print(( 'set_playlist() ' + str(e) + ': ' + str(v)))
+        print(('set_playlist() ' + str(e) + ': ' + str(v)))
         return False
     mpc.play()
     return True
 
 
-def status_update(Info):
+def status_update(info):
     # Zeitanzeige
-    Status = mpc.status()
+    mpc_status = mpc.status()
     try:
-        Songtime = int(Info['time'])
-        if Songtime == 0:
+        song_time = int(info['time'])
+        if song_time == 0:
             raise KeyError
-        sm, ss = divmod(Songtime, 60)
+        sm, ss = divmod(song_time, 60)
         sh, sm = divmod(sm, 60)
-        Elapsed = int(Status['elapsed'].split('.')[0])
-        em, es = divmod(Elapsed, 60)
+        elapsed = int(mpc_status['elapsed'].split('.')[0])
+        em, es = divmod(elapsed, 60)
         eh, em = divmod(em, 60)
         if not sh:
             hms_elapsed = "%02d:%02d" % (em, es)
@@ -778,21 +794,21 @@ def status_update(Info):
         time_text = datetime.datetime.now().strftime('%d.%m.%Y %H:%M')
     draw_text(status_win, time_text, status_font, status_color, align='centerx')
     # Lautstärkeanzeige
-    volume = 'Vol.: ' + Status.get('volume', str(oldvol)) + '%'
+    volume = 'Vol.: ' + mpc_status.get('volume', str(oldvol)) + '%'
     draw_text(status_win, volume, status_font, status_color)
     # Anzeige der Stück-/Stationsnummer
-    pln = str(int(Info.get('pos', '-1')) + 1) + '/' + Status.get('playlistlength', '0')
+    pln = str(int(info.get('pos', '-1')) + 1) + '/' + mpc_status.get('playlistlength', '0')
     draw_text(status_win, pln, status_font, status_color, align='topright')
     # Anzeige der Bitrate
-    bitrate = Status.get('bitrate', '0') + 'kbps'
+    bitrate = mpc_status.get('bitrate', '0') + 'kbps'
     draw_text(bitrate_win, bitrate, status_font, status_color, align='topright')
 
 
 def get_xfade_state():
     draw_text(msg_win, 'MPD Playback Settings', status_font, status_color, align='centerx')
-    Status = mpc.status()
-    if 'xfade' in Status:
-        secs = Status['xfade']
+    mpc_status = mpc.status()
+    if 'xfade' in mpc_status:
+        secs = mpc_status['xfade']
         if secs == '0':
             xf_state = 'off'  # für mpd unter 'wheezy'
         else:
@@ -804,14 +820,14 @@ def get_xfade_state():
     chk_win[0].blit(chk_buf[2], (0, 0))
     chk_win[1].blit(chk_buf[3], (chk_win[5].get_width() - chk_buf[3].get_width(), 0))
 
-    mr_db = 'MixRamp threshold: ' + str(round(float(Status['mixrampdb']), 1)) + 'dB'
+    mr_db = 'MixRamp threshold: ' + str(round(float(mpc_status['mixrampdb']), 1)) + 'dB'
     draw_text(screen, mr_db, status_font, font_color, align='centerx', pos=(0, chk_win[2].get_abs_offset()[1]))
     chk_win[2].blit(chk_buf[2], (0, 0))
     chk_win[3].blit(chk_buf[3], (chk_win[3].get_width() - chk_buf[3].get_width(), 0))
     mr_dl = 'MixRamp delay: off'
-    if 'mixrampdelay' in Status:
-        if round(float(Status['mixrampdelay']), 1) != 0.0:
-            mr_dl = 'MixRamp delay: ' + str(round(float(Status['mixrampdelay']), 1)) + 's'
+    if 'mixrampdelay' in mpc_status:
+        if round(float(mpc_status['mixrampdelay']), 1) != 0.0:
+            mr_dl = 'MixRamp delay: ' + str(round(float(mpc_status['mixrampdelay']), 1)) + 's'
     draw_text(screen, mr_dl, status_font, font_color, align='centerx', pos=(0, chk_win[4].get_abs_offset()[1]))
     chk_win[4].blit(chk_buf[2], (0, 0))
     chk_win[5].blit(chk_buf[3], (chk_win[5].get_width() - chk_buf[3].get_width(), 0))
@@ -822,42 +838,43 @@ def set_xfade_state(idx=None):
     # MixRamp benötigt MixRamp-Tags in den mp3-Dateien
     # Fallback ist Crossfade, wenn die Tags nicht vorhanden sind
     global Refresh
-    Status = mpc.status()
+    mpc_status = mpc.status()
     if idx == 0:
         secs = 0
-        if 'xfade' in Status:
-            secs = int(Status['xfade']) - 1
+        if 'xfade' in mpc_status:
+            secs = int(mpc_status['xfade']) - 1
             if secs <= 0:
                 secs = 0
         mpc.crossfade(secs)
     elif idx == 1:
-        if 'xfade' in Status:
-            secs = int(Status['xfade'])
-            if secs > 14: secs = 14
+        if 'xfade' in mpc_status:
+            secs = int(mpc_status['xfade'])
+            if secs > 14:
+                secs = 14
         else:
             secs = 0
         mpc.crossfade(secs + 1)
     elif idx == 2:
-        mr_db = float(Status['mixrampdb']) - 0.5
+        mr_db = float(mpc_status['mixrampdb']) - 0.5
         if mr_db < -30.0:
             mr_db = -30.0
         mpc.mixrampdb(mr_db)
     elif idx == 3:
-        mr_db = float(Status['mixrampdb']) + 0.5
+        mr_db = float(mpc_status['mixrampdb']) + 0.5
         if mr_db > 0.0:
             mr_db = 0.0
         mpc.mixrampdb(mr_db)
     elif idx == 4:
         mr_dl = 'nan'
-        if 'mixrampdelay' in Status:
-            mr_dl = float(Status['mixrampdelay']) - 0.5
+        if 'mixrampdelay' in mpc_status:
+            mr_dl = float(mpc_status['mixrampdelay']) - 0.5
             if mr_dl <= 0.0:
                 mr_dl = 'nan'
         mpc.mixrampdelay(mr_dl)
     elif idx == 5:
         mr_dl = 0.5
-        if 'mixrampdelay' in Status:
-            mr_dl = float(Status['mixrampdelay']) + 0.5
+        if 'mixrampdelay' in mpc_status:
+            mr_dl = float(mpc_status['mixrampdelay']) + 0.5
             if mr_dl > 15.0:
                 mr_dl = 15.0
         mpc.mixrampdelay(mr_dl)
@@ -868,23 +885,23 @@ def set_xfade_state(idx=None):
 
 def get_playback_state():
     draw_text(msg_win, 'MPD Playback Settings', status_font, status_color, align='centerx')
-    Status = mpc.status()
-    if Status['repeat'] == '1':
+    mpc_status = mpc.status()
+    if mpc_status['repeat'] == '1':
         chk_win[0].blit(chk_buf[1], (0, 0))
     else:
         chk_win[0].blit(chk_buf[0], (0, 0))
     draw_text(chk_win[0], ' Repeat', status_font, font_color, pos=(chk_buf[0].get_width(), 0))
-    if Status['random'] == '1':
+    if mpc_status['random'] == '1':
         chk_win[1].blit(chk_buf[1], (0, 0))
     else:
         chk_win[1].blit(chk_buf[0], (0, 0))
     draw_text(chk_win[1], ' Random', status_font, font_color, pos=(chk_buf[0].get_width(), 0))
-    if Status['consume'] == '1':
+    if mpc_status['consume'] == '1':
         chk_win[2].blit(chk_buf[1], (0, 0))
     else:
         chk_win[2].blit(chk_buf[0], (0, 0))
     draw_text(chk_win[2], ' Consume', status_font, font_color, pos=(chk_buf[0].get_width(), 0))
-    if Status['single'] == '1':
+    if mpc_status['single'] == '1':
         chk_win[3].blit(chk_buf[1], (0, 0))
     else:
         chk_win[3].blit(chk_buf[0], (0, 0))
@@ -896,15 +913,15 @@ def get_playback_state():
 
 def set_playback_state(idx=None):
     global Refresh
-    Status = mpc.status()
+    mpc_status = mpc.status()
     if idx == 0:
-        mpc.repeat(int(Status['repeat']) ^ 1)
+        mpc.repeat(int(mpc_status['repeat']) ^ 1)
     elif idx == 1:
-        mpc.random(int(Status['random']) ^ 1)
+        mpc.random(int(mpc_status['random']) ^ 1)
     elif idx == 2:
-        mpc.consume(int(Status['consume']) ^ 1)
+        mpc.consume(int(mpc_status['consume']) ^ 1)
     elif idx == 3:
-        mpc.single(int(Status['single']) ^ 1)
+        mpc.single(int(mpc_status['single']) ^ 1)
     elif idx == 4 or idx == 5:
         rg_mode = ['off', 'track', 'album', 'auto']
         idx = rg_mode.index(mpc.replay_gain_status()) + 1
@@ -940,7 +957,7 @@ def set_outputs(idx=None):
         mpd_connect(mpc)
         outputs = mpc.outputs()
     n = len(outputs)
-    if idx != None and idx < n:
+    if idx is not None and idx < n:
         if outputs[idx]['outputenabled'] == '1':
             mpc.disableoutput(idx)
         else:
@@ -1029,7 +1046,7 @@ def button(number):  # which button (and which menu) was pressed on touch
             btn_update_flag = True
             try:
                 if int(Info['pos']) + 1 < int(Status['playlistlength']):
-                    mpc.next() #next(mpc)
+                    mpc.next()  # next(mpc)
                 else:
                     mpc.play(0)
             except CommandError:
@@ -1100,12 +1117,12 @@ def button(number):  # which button (and which menu) was pressed on touch
             except:
                 pass
             pygame.time.wait(2500)
-            event = pygame.event.get()  # werfe aufgelaufene Events weg
+            pygame.event.get()  # werfe aufgelaufene Events weg
         elif number == 2:
             mpc.clear()
             waiting('cleared Playlist!')
             pygame.time.wait(1500)
-            event = pygame.event.get()  # werfe aufgelaufene Events weg
+            pygame.event.get()  # werfe aufgelaufene Events weg
             Dirty = True
             menu = 2
         elif number == 3:
@@ -1116,12 +1133,12 @@ def button(number):  # which button (and which menu) was pressed on touch
                 pass
             mpc.save(save_filename)
             pygame.time.wait(1500)
-            event = pygame.event.get()  # werfe aufgelaufene Events weg
+            pygame.event.get()  # werfe aufgelaufene Events weg
         elif number == 4:
             waiting('shuffling Playlist...')
             mpc.shuffle()
             pygame.time.wait(1500)
-            event = pygame.event.get()  # werfe aufgelaufene Events weg
+            pygame.event.get()  # werfe aufgelaufene Events weg
         elif number == 5:
             Dirty = True
             menu = 1
@@ -1133,8 +1150,10 @@ def button(number):  # which button (and which menu) was pressed on touch
         if number == 0:
             idx = -1
             for i in range(len(chk_rect)):
-                if chk_rect[i].collidepoint(pos): idx = i
-            if idx > -1: set_outputs(idx)
+                if chk_rect[i].collidepoint(pos):
+                    idx = i
+            if idx > -1:
+                set_outputs(idx)
         elif number == 1:
             TenMins = True
             menu = 6
@@ -1160,8 +1179,10 @@ def button(number):  # which button (and which menu) was pressed on touch
             if status_rect.collidepoint(pos):
                 idx = 9
             for i in range(len(chk_rect)):
-                if chk_rect[i].collidepoint(pos): idx = i
-            if idx > -1: set_config(idx)
+                if chk_rect[i].collidepoint(pos):
+                    idx = i
+            if idx > -1:
+                set_config(idx)
         if number == 1:
             waiting('saving configuration...')
             save_config()
@@ -1177,6 +1198,13 @@ def button(number):  # which button (and which menu) was pressed on touch
             if enable_gpio:
                 GPIO.cleanup()
             pygame.quit()
+            # TODO fit it, fails here
+            '''
+              File "/home/michael/development/raspberrypi/rpi-radio/newtron-radio-github/newtron-radio.py", 
+                                                            line 26, in <module>
+                from mpd import MPDClient, CommandError, ConnectionError
+                ModuleNotFoundError: No module named 'mpd'
+            '''
             os.execl(sys.argv[0], sys.argv[0], skins[skin_idx])
         elif number == 3:
             # Auffrischen
@@ -1209,40 +1237,76 @@ def button(number):  # which button (and which menu) was pressed on touch
         Refresh = True
         menu = 4
 
-def pygame_svg(svg_file, color, size):
-    scale = 0.667 #TODO figure out why we need scale to 2/3
+
+def pygame_svg(svg_file, color, svg_size):
+    # def load_svg(filename, mode='RGBA', scale=None, size=None, clip_from=None, fit_to=None):
+    """Returns Pygame Image object from rasterized SVG
+
+    If scale (float) is provided and is not None, image will be scaled.
+    If size (w, h tuple) is provided, the image will be clipped to specified size.
+    If clip_from (x, y tuple) is provided, the image will be clipped from specified point.
+    If fit_to (w, h tuple) is provided, image will be scaled to fit in specified rect.
+    """
+    # scale = 0.667  # TODO figure out why we need scale to 2/3
+    scale = None
     clip_from = None
-    #fit_to = None
-    format = 'RGBA'
+    fit_to = svg_size
+    svg_format = 'RGBA'
 
     with open(svg_file, "r+") as f:
         svgbuf = f.read()
     colorstr = '#%02x%02x%02x' % color
     svgbuf = svgbuf.replace("#00ffff", colorstr)
-    tmpfillename = 'mytemp.svg'
-    with open(tmpfillename, "w") as w:
-        w.write(svgbuf)
+    tmpfillename = '/tmp/mytemp.svg'
+    with open(tmpfillename, "w") as tmp_svg:
+        tmp_svg.write(svgbuf)
 
     svg = Parser.parse_file(tmpfillename)
+    tx, ty = 0, 0
+    if svg_size is None:
+        w, h = svg.width, svg.height
+    else:
+        w, h = svg_size
+        if clip_from is not None:
+            tx, ty = clip_from
+    if fit_to is None:
+        if scale is None:
+            scale = 1
+    else:
+        fit_w, fit_h = fit_to
+        scale_w = float(fit_w) / svg.width
+        scale_h = float(fit_h) / svg.height
+        scale = min([scale_h, scale_w])
+    rast = Rasterizer()
+    req_w = int(w * scale)
+    req_h = int(h * scale)
+    buff = rast.rasterize(svg, req_w, req_h, scale, tx, ty)
+    image = pygame.image.frombuffer(buff, (req_w, req_h), svg_format)
+    return image
 
-    # scale = min((fit_to[0] / svg.width, fit_to[1] / svg.height)
-    #             if fit_to else ([scale if scale else 1] * 2))
-    # width, height = size if size else (svg.width, svg.height)
-    surf_size = round(size[0]), round(size[1])#round(width * scale), round(height * scale)
-    buffer = Rasterizer().rasterize(svg, *surf_size, scale)#, *(clip_from if clip_from else 0, 0))
-    return  pygame.image.frombuffer(buffer, surf_size, format)
 
-
-# def pygame_svg2(svg_file, color, size):
+# def pygame_svg_org(svg_file, color, size):
+#     scale = 0.667  # TODO figure out why we need scale to 2/3
+#     clip_from = None
+#     # fit_to = None
+#     format = 'RGBA'
+#
 #     with open(svg_file, "r+") as f:
 #         svgbuf = f.read()
 #     colorstr = '#%02x%02x%02x' % color
 #     svgbuf = svgbuf.replace("#00ffff", colorstr)
+#     tmpfillename = 'mytemp.svg'
+#     with open(tmpfillename, "w") as w:
+#         w.write(svgbuf)
 #
-#     svg = imlib2.open_from_memory(svgbuf, size)
-#     strbuf = str(svg.get_raw_data(format='RGBA'))
-#     image = pygame.image.frombuffer(strbuf, size, "RGBA").convert_alpha()
-#     return image
+#     svg = Parser.parse_file(tmpfillename)
+#
+#     # scale = min((fit_to[0] / svg.width, fit_to[1] / svg.height)
+#     #             if fit_to else ([scale if scale else 1] * 2))
+#     # width, height = size if size else (svg.width, svg.height)
+#     surf_size = round(size[0]), round(size[1])  # round(width * scale), round(height * scale)
+#     buffer = Rasterizer().rasterize(svg, *surf_size)  # , scale)#, *(clip_from if clip_from else 0, 0))
+#     return pygame.image.frombuffer(buffer, surf_size, format)
 
 
 def skin2_base():
@@ -1353,95 +1417,95 @@ def get_wlan_level(netdev):
     return level
 
 
-def get_Station(Info):
+def get_station(info):
     # Welcher Sender
     try:
-        Station = Info['album']
+        station = info['album']
     except:
-        Station = None
-    if not Station:
+        station = None
+    if not station:
         try:
-            Station = Info['name']
+            station = info['name']
         except:
-            Station = "no data"
-    return Station
+            station = "no data"
+    return station
 
 
-def get_Title(Info):
+def get_title(info):
     # Welcher Titel
     try:
-        Title = Info['title'].strip()
+        title = info['title'].strip()
         # mit Spezialbehandlung für diverse Sender,
         # die vor den Songtitel nochmal den Sendernamen klatschen:
-        if Station.upper().split()[-1][-3:] + ': ' in Title.upper():
-            m = re.search('(.*): (.*)', Title)
-            Title = m.group(2)
+        if Station.upper().split()[-1][-3:] + ': ' in title.upper():
+            m = re.search('(.*): (.*)', title)
+            title = m.group(2)
         # Spezialbehandlung für diverse Icecast-Radiostationen
-        if 'text=' in Title:
-            m = re.search('(.*)text="([^"]*)"', Title)
-            Title = m.group(1) + m.group(2)
+        if 'text=' in title:
+            m = re.search('(.*)text="([^"]*)"', title)
+            title = m.group(1) + m.group(2)
     except:
-        Title = "no data"
+        title = "no data"
     try:
-        Artist = Info['artist'].strip()
-        if Artist == '': Artist = None
+        artist = info['artist'].strip()
+        if artist == '': artist = None
     except:
-        Artist = None
-    if Artist:
-        Title = Artist + ' - ' + Title
-    return Title
+        artist = None
+    if artist:
+        title = artist + ' - ' + title
+    return title
 
 
 def show_weather(OWM_ID, OWM_KEY):
-    Stadt = 'n/a'
-    Temperatur = '-'
-    Luftdruck = '-'
-    Luftfeuchte = '-'
-    Wetterlage = 'na'
-    Heute_min = '-'
-    Heute_max = '-'
-    Morgen_min = '-'
-    Morgen_max = '-'
-    Vorschau = 'na'
+    stadt = 'n/a'
+    temperatur = '-'
+    luftdruck = '-'
+    luftfeuchte = '-'
+    wetterlage = 'na'
+    heute_min = '-'
+    heute_max = '-'
+    morgen_min = '-'
+    morgen_max = '-'
+    vorschau = 'na'
 
     if not OWM_KEY:
         waiting('Please get an API-Key from', 'openweathermap.org/appid')
         pygame.time.wait(5000)
-        event = pygame.event.get()  # werfe aufgelaufene Events weg
+        pygame.event.get()  # werfe aufgelaufene Events weg
 
-    OpenWeather_Base = 'http://api.openweathermap.org/data/2.5/'
+    open_weather_base = 'http://api.openweathermap.org/data/2.5/'
     try:
         weather = urllib.request.urlopen(
-            OpenWeather_Base + 'weather?id=' + OWM_ID + '&units=metric&lang=de&mode=json&APPID=' + OWM_KEY)
+            open_weather_base + 'weather?id=' + OWM_ID + '&units=metric&lang=de&mode=json&APPID=' + OWM_KEY)
         weather_data = json.load(weather)
-        Stadt = weather_data['name']
-        Temperatur = str(int(round(weather_data['main']['temp'], 0)))  # - 273.15 if units!=metric
-        Luftdruck = str(int(weather_data['main']['pressure']))
-        Luftfeuchte = str(int(weather_data['main']['humidity']))
-        Wetterlage = weather_data['weather'][0]['icon']
+        stadt = weather_data['name']
+        temperatur = str(int(round(weather_data['main']['temp'], 0)))  # - 273.15 if units!=metric
+        luftdruck = str(int(weather_data['main']['pressure']))
+        luftfeuchte = str(int(weather_data['main']['humidity']))
+        wetterlage = weather_data['weather'][0]['icon']
     except:
-        print(( datetime.datetime.now().strftime('%H:%M') + ': No Weather Data.'))
+        print((datetime.datetime.now().strftime('%H:%M') + ': No Weather Data.'))
 
     try:
         pygame.time.wait(150)  # Warte 150ms um HttpError 429 zu vermeiden
         daily = urllib.request.urlopen(
-            OpenWeather_Base + 'forecast/daily?id=' + OWM_ID + '&units=metric&lang=de&mode=json&APPID=' + OWM_KEY)
+            open_weather_base + 'forecast/daily?id=' + OWM_ID + '&units=metric&lang=de&mode=json&APPID=' + OWM_KEY)
         daily_data = json.load(daily)
-        Heute_min = str(round(daily_data['list'][0]['temp']['min'], 1))
-        Heute_max = str(round(daily_data['list'][0]['temp']['max'], 1))
-        Morgen_min = str(round(daily_data['list'][1]['temp']['min'], 1))
-        Morgen_max = str(round(daily_data['list'][1]['temp']['max'], 1))
-        Vorschau = daily_data['list'][1]['weather'][0]['icon']
+        heute_min = str(round(daily_data['list'][0]['temp']['min'], 1))
+        heute_max = str(round(daily_data['list'][0]['temp']['max'], 1))
+        morgen_min = str(round(daily_data['list'][1]['temp']['min'], 1))
+        morgen_max = str(round(daily_data['list'][1]['temp']['max'], 1))
+        vorschau = daily_data['list'][1]['weather'][0]['icon']
     except:
-        print(( datetime.datetime.now().strftime('%H:%M') + ': No Forecast Data.'))
+        print((datetime.datetime.now().strftime('%H:%M') + ': No Forecast Data.'))
 
     ss_weather_win.fill(weather_bg_color)
     if weather_bg_buf:
         ss_weather_win.blit(weather_bg_buf, (0, 0), area=ss_weather_rect)
     fc_height = title_font.get_height() / 4
-    draw_text(screen, 'Wetter für ' + Stadt, title_font, weather_font_color, align='centerx', pos=(0, fc_height))
+    draw_text(screen, 'Wetter für ' + stadt, title_font, weather_font_color, align='centerx', pos=(0, fc_height))
     fc_height = title_font.get_height() * 5 / 4
-    draw_text(screen, 'Jetzt: ' + Temperatur + '°C' + ' / ' + Luftdruck + 'mb' + ' / ' + Luftfeuchte + '%rel.',
+    draw_text(screen, 'Jetzt: ' + temperatur + '°C' + ' / ' + luftdruck + 'mb' + ' / ' + luftfeuchte + '%rel.',
               title_font, weather_font_color, align='centerx', pos=(0, fc_height))
     fc_height = fc_height + title_font.get_height()
     draw_text(screen, 'Heute', status_font, weather_font_color, align='centerx',
@@ -1449,27 +1513,29 @@ def show_weather(OWM_ID, OWM_KEY):
     draw_text(screen, 'Morgen', status_font, weather_font_color, align='centerx',
               pos=(ss_weather_win.get_width() / 4, fc_height))
 
-    icon = os.path.join(WeatherPath, Wetterlage + '.png')
+    icon = os.path.join(WeatherPath, wetterlage + '.png')
     if not os.path.exists(icon):
         icon = os.path.join(WeatherPath, 'na.png')
-    icon2 = os.path.join(WeatherPath, Vorschau + '.png')
+    icon2 = os.path.join(WeatherPath, vorschau + '.png')
     if not os.path.exists(icon2):
         icon2 = os.path.join(WeatherPath, 'na.png')
     icon = pygame.image.load(icon).convert_alpha()
     icon2 = pygame.image.load(icon2).convert_alpha()
     icon = pygame.transform.smoothscale(icon,
-                                        (round(ss_weather_win.get_height() * 8 / 16), round(ss_weather_win.get_height() * 8 / 16)))
+                                        (round(ss_weather_win.get_height() * 8 / 16),
+                                         round(ss_weather_win.get_height() * 8 / 16)))
     icon2 = pygame.transform.smoothscale(icon2,
-                                         (round(ss_weather_win.get_height() * 8 / 16), round(ss_weather_win.get_height() * 8 / 16)))
+                                         (round(ss_weather_win.get_height() * 8 / 16),
+                                          round(ss_weather_win.get_height() * 8 / 16)))
     fc_height = fc_height + status_font.get_height()
     screen.blit(icon, (ss_weather_win.get_width() / 4 - icon.get_width() / 2, fc_height))
     screen.blit(icon2, (ss_weather_win.get_width() * 3 / 4 - icon.get_width() / 2, fc_height))
 
     fc_height = fc_height + icon.get_height()
-    heute_text = Heute_min + '/' + Heute_max + '°C'
+    heute_text = heute_min + '/' + heute_max + '°C'
     draw_text(screen, heute_text, status_font, weather_font_color, align='centerx',
               pos=(-ss_weather_win.get_width() / 4, fc_height))
-    morgen_text = Morgen_min + '/' + Morgen_max + '°C'
+    morgen_text = morgen_min + '/' + morgen_max + '°C'
     draw_text(screen, morgen_text, status_font, weather_font_color, align='centerx',
               pos=(ss_weather_win.get_width() / 4, fc_height))
     pygame.display.update(ss_weather_rect)
@@ -1477,9 +1543,9 @@ def show_weather(OWM_ID, OWM_KEY):
 
 def show_ss_status(show_clock=True):
     global Station
-    Info = mpc.currentsong()
-    Station = get_Station(Info)  # wird für get_Title() benötigt
-    ss_title = get_Title(Info)
+    info = mpc.currentsong()
+    Station = get_station(info)  # wird für get_Title() benötigt
+    ss_title = get_title(info)
     # Wenn der Titel zu lang ist, kürzen und mit '...' ergänzen
     if status_font.size(ss_title)[0] > ss_title_win.get_width():
         while status_font.size(ss_title)[0] > ss_title_win.get_width():
@@ -1577,20 +1643,20 @@ def update_screen():  # Hauptfunktion
 
         if menu == 1:  # Main Screen
 
-            Info = mpc.currentsong()
+            info = mpc.currentsong()
 
             # ScrollText nur Aktualisieren, wenn sich der Stationsname geändert hat
             _old_Station = Station
-            Station = get_Station(Info)
+            Station = get_station(info)
             if Dirty or (Station != _old_Station):
                 _station_label = ScrollText(station_win, Station, status_font, status_color, station_bg, btn_buf[0])
                 btn_update_flag = True
 
             # ScrollText nur Aktualisieren, wenn sich der Titel geändert hat
             _old_Title = Title
-            Title = get_Title(Info)
+            Title = get_title(info)
             if Dirty or (Title != _old_Title):
-                _title_label = ScrollText(title_win, Title, title_font, (font_color), title_bg, btn_buf[0])
+                _title_label = ScrollText(title_win, Title, title_font, font_color, title_bg, btn_buf[0])
                 btn_update_flag = True
 
             Dirty = False
@@ -1603,26 +1669,32 @@ def update_screen():  # Hauptfunktion
                     screen.blit(btn_buf[0], btn_pos[0])  # msg_frame
                 draw_text(msg_win, 'Now playing:', font, font_color,
                           pos=(0, title_win.get_offset()[1] - font.get_height()))
-                if x_button and ('pos' in Info):
-                    pygame.draw.rect(x_win, (font_color), x_win.get_rect(), x_win.get_width() / 7)
-                    pygame.draw.line(x_win, (font_color), (x_win.get_width() / 4, x_win.get_height() / 4),
-                                     (x_win.get_width() * 3 / 4, x_win.get_height() * 3 / 4), x_win.get_width() / 8)
-                    pygame.draw.line(x_win, (font_color), (x_win.get_width() / 4, x_win.get_height() * 3 / 4),
-                                     (x_win.get_width() * 3 / 4, x_win.get_height() / 4), x_win.get_width() / 8)
+                if x_button and ('pos' in info):
+                    pygame.draw.rect(x_win, font_color, x_win.get_rect(), round(x_win.get_width() / 7))
+                    pygame.draw.line(x_win, font_color,
+                                     (round(x_win.get_width() / 4), round(x_win.get_height() / 4)),
+                                     (round(x_win.get_width() * 3 / 4), round(x_win.get_height() * 3 / 4)),
+                                     round(x_win.get_width() / 8)
+                                     )
+                    pygame.draw.line(x_win, font_color,
+                                     (round(x_win.get_width() / 4), round(x_win.get_height() * 3 / 4)),
+                                     (round(x_win.get_width() * 3 / 4), round(x_win.get_height() / 4)),
+                                     round(x_win.get_width() / 8)
+                                     )
                 btn_update_flag = True
                 status_update_flag = True
 
             if btn_update_flag:
-                Status = mpc.status()
+                mpc_status = mpc.status()
                 btn_update_flag = False
                 screen.fill(bg_color, btn_rect[9])
                 if bg_buf:
                     screen.blit(bg_buf, btn_rect[9], area=btn_rect[9])
-                if 'state' in Status:
-                    if (Status['state'] == 'stop'):
+                if 'state' in mpc_status:
+                    if mpc_status['state'] == 'stop':
                         screen.blit(btn_buf[16], btn_pos[1])  # play
                         screen.blit(btn_buf[18], btn_pos[2])  # empty
-                    elif (Status['state'] == 'pause'):
+                    elif mpc_status['state'] == 'pause':
                         screen.blit(btn_buf[1], btn_pos[1])  # stop
                         screen.blit(btn_buf[16], btn_pos[2])  # play
                     else:
@@ -1648,7 +1720,7 @@ def update_screen():  # Hauptfunktion
                 status_update_flag = False
                 status_win.blit(status_bg, (0, 0))
                 bitrate_win.blit(bitrate_bg, (0, 0))
-                status_update(Info)
+                status_update(info)
                 if not text_on_top:
                     if Refresh:
                         screen.blit(btn_buf[0], btn_pos[0])  # msg_frame
@@ -1683,11 +1755,16 @@ def update_screen():  # Hauptfunktion
                                                playlists[pl_index][2], list_bg, sel_buf)
                 if plus_button:
                     if playlists[pl_index][0] == 'd':
-                        pygame.draw.rect(x_win, (font_color), x_win.get_rect(), x_win.get_width() / 7)
-                        pygame.draw.line(x_win, (font_color), (x_win.get_width() / 2, x_win.get_height() / 4),
-                                         (x_win.get_width() / 2, x_win.get_height() * 3 / 4), x_win.get_width() / 8)
-                        pygame.draw.line(x_win, (font_color), (x_win.get_width() / 4, x_win.get_height() / 2),
-                                         (x_win.get_width() * 3 / 4, x_win.get_height() / 2), x_win.get_width() / 8)
+                        pygame.draw.rect(x_win, font_color, x_win.get_rect(), round(x_win.get_width() / 7))
+                        pygame.draw.line(x_win, font_color,
+                                         (round(x_win.get_width() / 2), round(x_win.get_height() / 4)),
+                                         (round(x_win.get_width() / 2), round(x_win.get_height() * 3 / 4)),
+                                         round(x_win.get_width() / 8)
+                                         )
+                        pygame.draw.line(x_win, font_color,
+                                         (round(x_win.get_width() / 4), round(x_win.get_height() / 2)),
+                                         (round(x_win.get_width() * 3 / 4), round(x_win.get_height() / 2)),
+                                         round(x_win.get_width() / 8))
                 if not text_on_top:
                     skin2_base()
                 if Dirty:
@@ -1808,7 +1885,7 @@ def update_screen():  # Hauptfunktion
                 Refresh = False
                 screen.fill(bg_color)
                 clock = datetime.datetime.now().strftime('%H:%M')
-                clock_label = clock_font.render(clock, 1, clock_font_color, bg_color)
+                clock_label = clock_font.render(clock, True, clock_font_color, bg_color)
                 screen.blit(clock_label,
                             (randint(0, w - clock_label.get_width()),
                              randint(0, h - ss_title_win.get_height() - clock_label.get_height())
@@ -1828,386 +1905,396 @@ def update_screen():  # Hauptfunktion
             screensaver = False
 
 
-##### Ende der Funktions- und Klassendefinitionen ##########
+# -------- Ende der Funktions- und Klassendefinitionen --------
 
-# Lese Konfigurationsdaten
-read_config()
-disp_init()
-pygame.init()
-pygame.font.init()
-print(('Display area size: %d x %d' % size))
-if (Fullscreen):
-    screen = pygame.display.set_mode(size, pygame.SRCALPHA | pygame.FULLSCREEN)
-else:
-    screen = pygame.display.set_mode(size, pygame.SRCALPHA)
+def main():
+    global FiveSecs, OneSec, TenMins, Refresh, Dirty, SkinBase, SkinPath, WeatherPath, mpc, list_win, status_win, \
+        msg_win, screen, chk_win, btn_pos, ss_weather_win, ss_weather_rect, ss_title_win, ss_clock_win, ss_title_rect, \
+        ss_clock_rect, station_win, btn_rect, title_win, x_win, bitrate_win, status_rect, x_rect, pos, chk_rect, skins, \
+        bitrate_rect, skin, minutes, seconds, screensaver, skin_idx, menu, pl_index, playlists, Dirty
 
-# Verbinde mit MPD
-mpc = MPDClient()
-mpc.timeout = 10
-mpc.idletimeout = None
-mpd_connect(mpc)
-try:
-    mpc.update()
-except:
-    pass
-status = mpc.status()
-if 'volume' in status:
-    if int(mpc.status()['volume']) < 5:
-        setvol(oldvol)
-else:
+    # Lese Konfigurationsdaten
+    read_config()
+    disp_init()
+    pygame.init()
+    pygame.font.init()
+    print(('Display area size: %d x %d' % size))
+    if fullscreen:
+        screen = pygame.display.set_mode(size, pygame.SRCALPHA | pygame.FULLSCREEN)
+    else:
+        screen = pygame.display.set_mode(size, pygame.SRCALPHA)
+
+    # Verbinde mit MPD
+    mpc = MPDClient()
+    mpc.timeout = 10
+    mpc.idletimeout = None
+    mpd_connect(mpc)
     try:
-        setvol(oldvol)
+        mpc.update()
     except:
-        print( "could not set volume - continuing anyway...")
+        pass
+    status = mpc.status()
+    if 'volume' in status:
+        if int(mpc.status()['volume']) < 5:
+            setvol(oldvol)
+    else:
+        try:
+            setvol(oldvol)
+        except:
+            print("could not set volume - continuing anyway...")
 
-# OpenWeatherMap Ortsdaten und Key
-# Falls eine Umgebungsvariable 'OWM_ID' existiert, nehme diese
-if os.getenv('OWM_ID'):
-    OWM_ID = os.getenv('OWM_ID')
-# Falls eine Umgebungsvariable 'OWM_KEY' existiert, nehme diese
-if os.getenv('OWM_KEY'):
-    OWM_KEY = os.getenv('OWM_KEY')
+    # OpenWeatherMap Ortsdaten und Key
+    # Falls eine Umgebungsvariable 'OWM_ID' existiert, nehme diese
+    if os.getenv('OWM_ID'):
+        OWM_ID = os.getenv('OWM_ID')
+    # Falls eine Umgebungsvariable 'OWM_KEY' existiert, nehme diese
+    if os.getenv('OWM_KEY'):
+        OWM_KEY = os.getenv('OWM_KEY')
 
-##### Skin management ######################################
-try:
-    skin = sys.argv[1]
-    menu = 5
-except:
-    pass
+    # -------- Skin management --------
+    try:
+        skin = sys.argv[1]
+        menu = 5
+    except:
+        pass
 
-# Pfad zu den Button und Imagedateien des Skins
-SkinBase = os.path.join(ScriptPath, 'skins')
-SkinPath = os.path.join(SkinBase, skin)
-WeatherPath = os.path.join(SkinBase, "weather")
+    # Pfad zu den Button und Imagedateien des Skins
+    SkinBase = os.path.join(ScriptPath, 'skins')
+    SkinPath = os.path.join(SkinBase, skin)
+    WeatherPath = os.path.join(SkinBase, "weather")
 
-read_skin_config()
-skins = get_skins()
-try:
-    skin_idx = skins.index(skin)
-except:
-    print( "Could not find a valid Skin!")
-    print( "exiting...")
-    if enable_gpio:
-        GPIO.cleanup()
-    pygame.quit()
-    sys.exit()
+    read_skin_config()
+    skins = get_skins()
+    try:
+        skin_idx = skins.index(skin)
+    except:
+        print("Could not find a valid Skin!")
+        print("exiting...")
+        if enable_gpio:
+            GPIO.cleanup()
+        pygame.quit()
+        sys.exit()
 
-# Abstand des Textes von den Bildschirmrändern
-# relativ zur Basisgrösse des Skins (480x320)
-border_top = 14 * h / 320
-border_side = 21 * w / 480
+    # Abstand des Textes von den Bildschirmrändern
+    # relativ zur Basisgrösse des Skins (480x320)
+    border_top = 14 * h / 320
+    border_side = 21 * w / 480
 
-# Screensaver-rects
-ss_title_win = screen.subsurface(
-    [0,
-     h - status_font.get_height() * 3 / 2,
-     w,
-     status_font.get_height() * 3 / 2
-     ]
-)
-ss_title_rect = ss_title_win.get_rect(topleft=ss_title_win.get_abs_offset())
+    # Screensaver-rects
+    ss_title_win = screen.subsurface(
+        [0,
+         h - status_font.get_height() * 3 / 2,
+         w,
+         status_font.get_height() * 3 / 2
+         ]
+    )
+    ss_title_rect = ss_title_win.get_rect(topleft=ss_title_win.get_abs_offset())
 
-ss_clock_win = screen.subsurface(
-    [0,
-     ss_title_win.get_abs_offset()[1] - title_font.get_height(),
-     w,
-     title_font.get_height()
-     ]
-)
-ss_clock_rect = ss_clock_win.get_rect(topleft=ss_clock_win.get_abs_offset())
+    ss_clock_win = screen.subsurface(
+        [0,
+         ss_title_win.get_abs_offset()[1] - title_font.get_height(),
+         w,
+         title_font.get_height()
+         ]
+    )
+    ss_clock_rect = ss_clock_win.get_rect(topleft=ss_clock_win.get_abs_offset())
 
-ss_weather_win = screen.subsurface(
-    [0,
-     0,
-     w,
-     ss_clock_win.get_abs_offset()[1]
-     ]
-)
-ss_weather_rect = ss_weather_win.get_rect(topleft=ss_weather_win.get_offset())
+    ss_weather_win = screen.subsurface(
+        [0,
+         0,
+         w,
+         ss_clock_win.get_abs_offset()[1]
+         ]
+    )
+    ss_weather_rect = ss_weather_win.get_rect(topleft=ss_weather_win.get_offset())
 
-# Fenster für alles innerhalb des msg_frames
-msg_win = screen.subsurface(
-    [border_side,
-     border_top,
-     w - 2 * border_side,
-     h / 2 - 2 * border_top
-     ]
-)
+    # Fenster für alles innerhalb des msg_frames
+    msg_win = screen.subsurface(
+        [border_side,
+         border_top,
+         w - 2 * border_side,
+         h / 2 - 2 * border_top
+         ]
+    )
 
-# Fenster für den Stationsnamen (left,top,width,height)
-station_win = msg_win.subsurface(
-    [0,
-     0,
-     msg_win.get_width() * 12 / 16,
-     status_font.get_height()
-     ]
-)
+    # Fenster für den Stationsnamen (left,top,width,height)
+    station_win = msg_win.subsurface(
+        [0,
+         0,
+         msg_win.get_width() * 12 / 16,
+         status_font.get_height()
+         ]
+    )
 
-# Fenster in dem der Titel eingeblendet wird (left,top,width,height)
-title_win = msg_win.subsurface(
-    [0,
-     msg_win.get_height() / 2 - title_font.get_height() / 4,
-     msg_win.get_width(),
-     title_font.get_height()
-     ]
-)
+    # Fenster in dem der Titel eingeblendet wird (left,top,width,height)
+    title_win = msg_win.subsurface(
+        [0,
+         msg_win.get_height() / 2 - title_font.get_height() / 4,
+         msg_win.get_width(),
+         title_font.get_height()
+         ]
+    )
 
-# Fenster für die Statusinfos (left,top,width,height)
-status_win = msg_win.subsurface(
-    [0,
-     msg_win.get_height() - status_font.get_height(),
-     msg_win.get_width(),
-     status_font.get_height()
-     ]
-)
-status_rect = status_win.get_rect(topleft=status_win.get_abs_offset())
+    # Fenster für die Statusinfos (left,top,width,height)
+    status_win = msg_win.subsurface(
+        [0,
+         msg_win.get_height() - status_font.get_height(),
+         msg_win.get_width(),
+         status_font.get_height()
+         ]
+    )
+    status_rect = status_win.get_rect(topleft=status_win.get_abs_offset())
 
-# Fenster für die Anzeige der Bitrate (left,top,width,height)
-bitrate_win = msg_win.subsurface(
-    [msg_win.get_width() * 12 / 16,
-     0,
-     msg_win.get_width() * 4 / 16,
-     status_font.get_height()
-     ]
-)
-bitrate_rect = bitrate_win.get_rect(topleft=bitrate_win.get_abs_offset())
+    # Fenster für die Anzeige der Bitrate (left,top,width,height)
+    bitrate_win = msg_win.subsurface(
+        [msg_win.get_width() * 12 / 16,
+         0,
+         msg_win.get_width() * 4 / 16,
+         status_font.get_height()
+         ]
+    )
+    bitrate_rect = bitrate_win.get_rect(topleft=bitrate_win.get_abs_offset())
 
-x_win = msg_win.subsurface(
-    [title_win.get_width() - title_font.get_height(),
-     bitrate_win.get_height(),
-     title_font.get_height(),
-     title_font.get_height(),
-     ]
-)
-x_rect = x_win.get_rect(topleft=x_win.get_abs_offset())
+    x_win = msg_win.subsurface(
+        [title_win.get_width() - title_font.get_height(),
+         bitrate_win.get_height(),
+         title_font.get_height(),
+         title_font.get_height(),
+         ]
+    )
+    x_rect = x_win.get_rect(topleft=x_win.get_abs_offset())
 
-# Bereiche für die Checkboxen
-chk_win = [msg_win.subsurface(
-    [0,
-     msg_win.get_height() * 1 / 5,
-     msg_win.get_width() / 2,
-     h / 10
-     ]
-),
-    msg_win.subsurface(
-        [msg_win.get_width() / 2,
+    # Bereiche für die Checkboxen
+    chk_win = [msg_win.subsurface(
+        [0,
          msg_win.get_height() * 1 / 5,
          msg_win.get_width() / 2,
          h / 10
          ]
     ),
-    msg_win.subsurface(
-        [0,
-         msg_win.get_height() * 2 / 5,
-         msg_win.get_width() / 2,
-         h / 10
-         ]
-    ),
-    msg_win.subsurface(
-        [msg_win.get_width() / 2,
-         msg_win.get_height() * 2 / 5,
-         msg_win.get_width() / 2,
-         h / 10
-         ]
-    ),
-    msg_win.subsurface(
-        [0,
-         msg_win.get_height() * 3 / 5,
-         msg_win.get_width() / 2,
-         h / 10
-         ]
-    ),
-    msg_win.subsurface(
-        [msg_win.get_width() / 2,
-         msg_win.get_height() * 3 / 5,
-         msg_win.get_width() / 2,
-         h / 10
-         ]
-    )
-]
-chk_rect = []
-for i in range(len(chk_win)):
-    chk_rect.append(chk_win[i].get_rect(topleft=chk_win[i].get_abs_offset()))
+        msg_win.subsurface(
+            [msg_win.get_width() / 2,
+             msg_win.get_height() * 1 / 5,
+             msg_win.get_width() / 2,
+             h / 10
+             ]
+        ),
+        msg_win.subsurface(
+            [0,
+             msg_win.get_height() * 2 / 5,
+             msg_win.get_width() / 2,
+             h / 10
+             ]
+        ),
+        msg_win.subsurface(
+            [msg_win.get_width() / 2,
+             msg_win.get_height() * 2 / 5,
+             msg_win.get_width() / 2,
+             h / 10
+             ]
+        ),
+        msg_win.subsurface(
+            [0,
+             msg_win.get_height() * 3 / 5,
+             msg_win.get_width() / 2,
+             h / 10
+             ]
+        ),
+        msg_win.subsurface(
+            [msg_win.get_width() / 2,
+             msg_win.get_height() * 3 / 5,
+             msg_win.get_width() / 2,
+             h / 10
+             ]
+        )
+    ]
+    chk_rect = []
+    for i in range(len(chk_win)):
+        chk_rect.append(chk_win[i].get_rect(topleft=chk_win[i].get_abs_offset()))
 
-# Fenster für die Playlistenauswahl
-list_win = [screen.subsurface(
-    [border_side,
-     h / 4 - title_font.get_height() / 2,
-     w - 2 * border_side,
-     title_font.get_height()
-     ]
-),
-    screen.subsurface(
+    # Fenster für die Playlistenauswahl
+    list_win = [screen.subsurface(
         [border_side,
-         h / 4 - title_font.get_height() / 2 - status_font.get_height() * 7 / 5,
-         msg_win.get_width(),
-         status_font.get_height()
+         h / 4 - title_font.get_height() / 2,
+         w - 2 * border_side,
+         title_font.get_height()
          ]
     ),
-    screen.subsurface(
-        [border_side,
-         h / 4 - title_font.get_height() / 2 - status_font.get_height() * 12 / 5,
-         msg_win.get_width(),
-         status_font.get_height()
-         ]
-    ),
-    screen.subsurface(
-        [border_side,
-         h / 4 + title_font.get_height() / 2 + status_font.get_height() * 2 / 5,
-         msg_win.get_width(),
-         status_font.get_height()
-         ]
-    ),
-    screen.subsurface(
-        [border_side,
-         h / 4 + title_font.get_height() / 2 + status_font.get_height() * 7 / 5,
-         msg_win.get_width(),
-         status_font.get_height()
-         ]
-    )
-]
+        screen.subsurface(
+            [border_side,
+             h / 4 - title_font.get_height() / 2 - status_font.get_height() * 7 / 5,
+             msg_win.get_width(),
+             status_font.get_height()
+             ]
+        ),
+        screen.subsurface(
+            [border_side,
+             h / 4 - title_font.get_height() / 2 - status_font.get_height() * 12 / 5,
+             msg_win.get_width(),
+             status_font.get_height()
+             ]
+        ),
+        screen.subsurface(
+            [border_side,
+             h / 4 + title_font.get_height() / 2 + status_font.get_height() * 2 / 5,
+             msg_win.get_width(),
+             status_font.get_height()
+             ]
+        ),
+        screen.subsurface(
+            [border_side,
+             h / 4 + title_font.get_height() / 2 + status_font.get_height() * 7 / 5,
+             msg_win.get_width(),
+             status_font.get_height()
+             ]
+        )
+    ]
 
-# Startbildschirm anzeigen
-splashscreen = os.path.join(SkinBase, "Splash.png")
-splash_buf = pygame.image.load(splashscreen).convert_alpha()
-splash_buf = pygame.transform.smoothscale(splash_buf, size)
-screen.blit(splash_buf, (0, 0))
-del splash_buf
-pygame.display.flip()
+    # Startbildschirm anzeigen
+    splashscreen = os.path.join(SkinBase, "Splash.png")
+    splash_buf = pygame.image.load(splashscreen).convert_alpha()
+    splash_buf = pygame.transform.smoothscale(splash_buf, size)
+    screen.blit(splash_buf, (0, 0))
+    del splash_buf
+    pygame.display.flip()
 
-btn_win = screen.subsurface([0, h / 2, w, h / 2])
-# Touchbutton Positionen (screen)
-btn_pos = [(0, 0), (0, h / 2), (w / 4, h / 2), (w / 2, h / 2), (w * 3 / 4, h / 2),
-           (0, h * 3 / 4), (w / 4, h * 3 / 4), (w / 2, h * 3 / 4), (w * 3 / 4, h * 3 / 4)]
-# Obere Bildschirmhälfte (btn_rect[0]), der Bereich des Anzeigefensters
-btn_rect = [pygame.Rect(0, 0, w, h / 2)]
-# Rects der acht Buttons
-for i in range(1, len(btn_pos)):
-    btn_rect.append(pygame.Rect(btn_pos[i][0], btn_pos[i][1], w / 4, h / 4))
-# Untere Bildschirmhälfte (btn_rect[9]), der Bereich der Buttons
-btn_rect.append(btn_win.get_rect(topleft=btn_win.get_abs_offset()))
+    btn_win = screen.subsurface([0, h / 2, w, h / 2])
+    # Touchbutton Positionen (screen)
+    btn_pos = [(0, 0), (0, h / 2), (w / 4, h / 2), (w / 2, h / 2), (w * 3 / 4, h / 2),
+               (0, h * 3 / 4), (w / 4, h * 3 / 4), (w / 2, h * 3 / 4), (w * 3 / 4, h * 3 / 4)]
+    # Obere Bildschirmhälfte (btn_rect[0]), der Bereich des Anzeigefensters
+    btn_rect = [pygame.Rect(0, 0, w, h / 2)]
+    # Rects der acht Buttons
+    for i in range(1, len(btn_pos)):
+        btn_rect.append(pygame.Rect(btn_pos[i][0], btn_pos[i][1], w / 4, h / 4))
+    # Untere Bildschirmhälfte (btn_rect[9]), der Bereich der Buttons
+    btn_rect.append(btn_win.get_rect(topleft=btn_win.get_abs_offset()))
 
-# Lade den Skin
-load_skin()
+    # Lade den Skin
+    load_skin()
 
-# Hole Playlisten
-init_playlists()
-playlists = get_playlists()
-pl_index = 0
+    # Hole Playlisten
+    init_playlists()
+    playlists = get_playlists()
+    pl_index = 0
 
-# userevent on every minute, used for screensaver
-pygame.time.set_timer(USEREVENT + 1, 60000)
-# userevent on every second, used for screen-updates
-pygame.time.set_timer(USEREVENT + 2, 1000)
-# userevent on every 30 seconds, used for mpc.ping()
-pygame.time.set_timer(USEREVENT + 3, 30000)
-# userevent on every 10 minutes, used for Weather-Update
-pygame.time.set_timer(USEREVENT + 4, 600000)
-sclock = pygame.time.Clock()
+    # userevent on every minute, used for screensaver
+    pygame.time.set_timer(USEREVENT + 1, 60000)
+    # userevent on every second, used for screen-updates
+    pygame.time.set_timer(USEREVENT + 2, 1000)
+    # userevent on every 30 seconds, used for mpc.ping()
+    pygame.time.set_timer(USEREVENT + 3, 30000)
+    # userevent on every 10 minutes, used for Weather-Update
+    pygame.time.set_timer(USEREVENT + 4, 600000)
+    sclock = pygame.time.Clock()
 
-###### Start der Anzeige ###################################
+    # --------- Start der Anzeige --------
 
-update_screen()
+    update_screen()
 
-##### Start der Eventschleife ##############################
+    # --------- Start der Eventschleife ---------
 
-try:
-    running = True
-    while running:
-        sclock.tick(FPS)
-        for event in pygame.event.get():
-            if event.type == USEREVENT + 1:
-                minutes += 1
-            if event.type == USEREVENT + 2:
-                OneSec = True
-                seconds += 1
-                if seconds >= 5:
-                    FiveSecs = True
-                    seconds = 0
-            if event.type == USEREVENT + 3:
-                # try to keep connection to mpd alive
-                try:
-                    mpc.ping()
-                except:
-                    mpd_connect(mpc)
-            if event.type == USEREVENT + 4:
-                TenMins = True
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == K_ESCAPE:
+    try:
+        running = True
+        while running:
+            sclock.tick(FPS)
+            for event in pygame.event.get():
+                if event.type == USEREVENT + 1:
+                    minutes += 1
+                if event.type == USEREVENT + 2:
+                    OneSec = True
+                    seconds += 1
+                    if seconds >= 5:
+                        FiveSecs = True
+                        seconds = 0
+                if event.type == USEREVENT + 3:
+                    # try to keep connection to mpd alive
+                    try:
+                        mpc.ping()
+                    except:
+                        mpd_connect(mpc)
+                if event.type == USEREVENT + 4:
+                    TenMins = True
+                if event.type == pygame.QUIT:
                     pygame.quit()
                     sys.exit()
 
-            # if screensaver is enabled and the screen was touched,
-            # just disable screensaver, reset timer and update screen
-            # no button state will be checked
+                if event.type == pygame.KEYDOWN:
+                    if event.key == K_ESCAPE:
+                        pygame.quit()
+                        sys.exit()
+
+                # if screensaver is enabled and the screen was touched,
+                # just disable screensaver, reset timer and update screen
+                # no button state will be checked
+                try:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if screensaver:
+                            Refresh = True
+                            # Dirty Hack - Erzwinge update von Station und Titel
+                            Dirty = True
+                            minutes = 0
+                            screensaver = False
+                            if enable_gpio:
+                                GPIO.output(18, bl_on)
+                            if menu == 6 and screensaver_mode == 'weather':  # Wetteranzeige über Wolkenbutton
+                                menu = 4
+                        else:
+                            # if screen was touched and screensaver is
+                            # disabled, get position of touched button,
+                            # reset timer and call button()
+                            pos = (pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
+                            minutes = 0
+                            for i in range(len(btn_rect) - 1):
+                                if btn_rect[i].collidepoint(pos):
+                                    button(i)
+                except KeyError:
+                    pass
+                except socket.timeout as e:
+                    print((str(e) + "\nRestarting mpd..."))
+                    run_command("sudo service mpd restart", shell=True)
+                    Refresh = True
+                    Dirty = True
+                    pygame.time.wait(1500)
+                except (ConnectionError, socket.error) as e:
+                    print(('Connection Error (touch): ' + str(e)))
+                    mpd_connect(mpc)
+                    Refresh = True
+                    Dirty = True
+
+            # enable screensaver on timer overflow
+            if minutes >= screensaver_timer:
+                if screensaver_mode != 'off':
+                    screensaver = True
+                    if enable_gpio:
+                        GPIO.output(18, bl_off)
+
             try:
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if screensaver:
-                        Refresh = True
-                        # Dirty Hack - Erzwinge update von Station und Titel
-                        Dirty = True
-                        minutes = 0
-                        screensaver = False
-                        if enable_gpio:
-                            GPIO.output(18, bl_on)
-                        if menu == 6 and screensaver_mode == 'weather':  # Wetteranzeige über Wolkenbutton
-                            menu = 4
-                    else:
-                        # if screen was touched and screensaver is
-                        # disabled, get position of touched button,
-                        # reset timer and call button()
-                        pos = (pygame.mouse.get_pos()[0], pygame.mouse.get_pos()[1])
-                        minutes = 0
-                        for i in range(len(btn_rect) - 1):
-                            if btn_rect[i].collidepoint(pos):
-                                button(i)
-            except KeyError:
-                pass
-            except socket.timeout as e:
-                print(( str(e) + "\nRestarting mpd..."))
-                run_command("sudo service mpd restart", shell=True)
-                Refresh = True
-                Dirty = True
-                pygame.time.wait(1500)
+                update_screen()
             except (ConnectionError, socket.error) as e:
-                print(('Connection Error (touch): ' + str(e)))
+                print(('Connection Error (update): ' + str(e)))
                 mpd_connect(mpc)
                 Refresh = True
                 Dirty = True
+            except CommandError as e:
+                print(('CommandError (update): ' + str(e)))
+                waiting('one output required!')
+                pygame.time.wait(5000)
+                pygame.event.get()  # werfe aufgelaufene Events weg
+                menu = 3
+                Refresh = True
+    except KeyboardInterrupt:
+        # Clean exit if Ctrl-C was pressed
+        print("\nCtrl-C pressed - exiting...")
+        pygame.quit()
+        sys.exit()
+    finally:
+        if enable_gpio:
+            GPIO.setwarnings(False)
+            GPIO.output(18, bl_on)
+            GPIO.cleanup()
+        print("\nbye...\n")
 
-        # enable screensaver on timer overflow
-        if minutes >= screensaver_timer:
-            if screensaver_mode != 'off':
-                screensaver = True
-                if enable_gpio:
-                    GPIO.output(18, bl_off)
 
-        try:
-            update_screen()
-        except (ConnectionError, socket.error) as e:
-            print(('Connection Error (update): ' + str(e)))
-            mpd_connect(mpc)
-            Refresh = True
-            Dirty = True
-        except CommandError as e:
-            print(( 'CommandError (update): ' + str(e)))
-            waiting('one output required!')
-            pygame.time.wait(5000)
-            event = pygame.event.get()  # werfe aufgelaufene Events weg
-            menu = 3
-            Refresh = True
-except KeyboardInterrupt:
-    # Clean exit if Ctrl-C was pressed
-    print( "\nCtrl-C pressed - exiting...")
-    pygame.quit()
-    sys.exit()
-finally:
-    if enable_gpio:
-        GPIO.setwarnings(False)
-        GPIO.output(18, bl_on)
-        GPIO.cleanup()
-    print( "\nbye...\n")
+if __name__ == "__main__":
+    main()
