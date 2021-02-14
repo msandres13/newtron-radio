@@ -3,23 +3,24 @@
 import sys
 # print(sys.version)
 import os
+import io
 import datetime
 import pwd
 import grp
 import re
 import shutil
 import socket
+import tempfile
 import pygame
 import urllib
-
+import svgutils
 from pygame.locals import *
 from random import randint
 import json
 from operator import itemgetter
 from mpd import MPDClient, CommandError, ConnectionError
 from svg import Rasterizer, Parser
-# pip install Cython
-# pip install pynanosvg
+
 from builtins import (str, open, range,
                       round, int, object)
 
@@ -1237,76 +1238,39 @@ def button(number):  # which button (and which menu) was pressed on touch
         Refresh = True
         menu = 4
 
-
-def pygame_svg(svg_file, color, svg_size):
-    # def load_svg(filename, mode='RGBA', scale=None, size=None, clip_from=None, fit_to=None):
-    """Returns Pygame Image object from rasterized SVG
-
-    If scale (float) is provided and is not None, image will be scaled.
-    If size (w, h tuple) is provided, the image will be clipped to specified size.
-    If clip_from (x, y tuple) is provided, the image will be clipped from specified point.
-    If fit_to (w, h tuple) is provided, image will be scaled to fit in specified rect.
-    """
-    # scale = 0.667  # TODO figure out why we need scale to 2/3
-    scale = None
-    clip_from = None
-    fit_to = svg_size
+# TODO simplify or use memory files
+def pygame_svg(svg_file, color, svg_size_w_h):
+    svg_size_w_h = (round(svg_size_w_h[0]), round(svg_size_w_h[1]))
     svg_format = 'RGBA'
-
+    tmp_filename = tempfile.NamedTemporaryFile(prefix='tmp').name
+    print(f"Open file {svg_file}".format(svg_file))
+    # convert color
     with open(svg_file, "r+") as f:
         svgbuf = f.read()
     colorstr = '#%02x%02x%02x' % color
     svgbuf = svgbuf.replace("#00ffff", colorstr)
-    tmpfillename = '/tmp/mytemp.svg'
-    with open(tmpfillename, "w") as tmp_svg:
+    with open(tmp_filename, "w") as tmp_svg:
         tmp_svg.write(svgbuf)
 
-    svg = Parser.parse_file(tmpfillename)
-    tx, ty = 0, 0
-    if svg_size is None:
-        w, h = svg.width, svg.height
-    else:
-        w, h = svg_size
-        if clip_from is not None:
-            tx, ty = clip_from
-    if fit_to is None:
-        if scale is None:
-            scale = 1
-    else:
-        fit_w, fit_h = fit_to
-        scale_w = float(fit_w) / svg.width
-        scale_h = float(fit_h) / svg.height
-        scale = min([scale_h, scale_w])
+    # scale svg relative to x and y to target resolution
+    original_svg = svgutils.compose.SVG(tmp_filename)
+    scale_x = svg_size_w_h[0] / original_svg.width
+    scale_y = svg_size_w_h[1] / original_svg.height
+    original_svg.scale(scale_x, scale_y)
+    figure = svgutils.compose.Figure(size[0], size[1], original_svg)
+    figure.save(tmp_filename)
+
+    # convert svg to png
+    svg = Parser.parse_file(tmp_filename)
     rast = Rasterizer()
-    req_w = int(w * scale)
-    req_h = int(h * scale)
-    buff = rast.rasterize(svg, req_w, req_h, scale, tx, ty)
-    image = pygame.image.frombuffer(buff, (req_w, req_h), svg_format)
+    buff = rast.rasterize(svg, *svg_size_w_h)
+
+    # convert to pygame image
+    image = pygame.image.frombuffer(buff, svg_size_w_h, svg_format)
+
+    os.remove(tmp_filename)
+
     return image
-
-
-# def pygame_svg_org(svg_file, color, size):
-#     scale = 0.667  # TODO figure out why we need scale to 2/3
-#     clip_from = None
-#     # fit_to = None
-#     format = 'RGBA'
-#
-#     with open(svg_file, "r+") as f:
-#         svgbuf = f.read()
-#     colorstr = '#%02x%02x%02x' % color
-#     svgbuf = svgbuf.replace("#00ffff", colorstr)
-#     tmpfillename = 'mytemp.svg'
-#     with open(tmpfillename, "w") as w:
-#         w.write(svgbuf)
-#
-#     svg = Parser.parse_file(tmpfillename)
-#
-#     # scale = min((fit_to[0] / svg.width, fit_to[1] / svg.height)
-#     #             if fit_to else ([scale if scale else 1] * 2))
-#     # width, height = size if size else (svg.width, svg.height)
-#     surf_size = round(size[0]), round(size[1])  # round(width * scale), round(height * scale)
-#     buffer = Rasterizer().rasterize(svg, *surf_size)  # , scale)#, *(clip_from if clip_from else 0, 0))
-#     return pygame.image.frombuffer(buffer, surf_size, format)
 
 
 def skin2_base():
