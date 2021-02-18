@@ -1,12 +1,11 @@
 #!/usr/bin/python3
 # coding=utf-8
+import subprocess
 import sys
 # print(sys.version)
 import os
-import io
 import datetime
 import pwd
-import grp
 import re
 import shutil
 import socket
@@ -268,10 +267,21 @@ select_pl = "Playlist_msg.svg"
 
 
 # -------- Funktions- und Klassendefinitionen --------
+def pi_power_off():
+    run_command('sudo poweroff', shell=True)
+
+
+def pi_restart():
+    run_command('sudo reboot', shell=True)
+
+
+def mpd_restart():
+    run_command("service --user mpd restart", shell=True)
+
 
 def run_command(cmd, shell):
     print('The executed is {}.'.format(cmd))
-    # subprocess.call(cmd, shell)
+    subprocess.call(cmd, shell)
 
 
 def disp_init():  # (Automatische) Erkennung des Displays
@@ -360,7 +370,7 @@ def reboot():
     pygame.display.flip()
     pygame.time.wait(5000)
     pygame.quit()
-    run_command('sudo reboot', shell=True)
+    pi_reboot()
 
 
 def poweroff():
@@ -372,7 +382,7 @@ def poweroff():
     pygame.display.flip()
     pygame.time.wait(5000)
     pygame.quit()
-    run_command('sudo poweroff', shell=True)
+    pi_power_off
 
 
 def waiting(msg_text1='please wait...', msg_text2=None):
@@ -432,7 +442,7 @@ def mpd_connect(client):
             # TODO fix print
             # print(e + ': ' + v)
             print("restarting mpd...")
-            run_command("sudo service mpd restart", shell=True)
+            mpd_restart()
             pygame.time.wait(1500)
             mpd_connect(client)
     # except: # catch *all* exceptions
@@ -641,18 +651,19 @@ def init_playlists():
     if not mpc.listplaylists():
         print(("copying some playlists to " + pl_dir))
         # Mache das mpd Playlisten Verzeichnis für den Benutzer schreibbar
-        scriptuserid = os.getuid()
-        if not scriptuserid:  # Script läuft nicht als 'root'
-            # Scriptuser sollte im Normalfall der User 'pi' sein
-            scriptuser = pwd.getpwuid(scriptuserid).pw_name
-            if not scriptuser in grp.getgrnam('audio').gr_mem:
-                # Der Scriptuser sollte Mitglied der Gruppe 'audio' sein
-                run_command("sudo usermod -a -G audio " + scriptuser, shell=True)
-        if os.path.isdir(pl_dir):
-            # Mache das mpd Playlisten Verzeichnis für
-            # die Gruppe 'audio' beschreibbar
-            run_command("sudo chgrp audio " + pl_dir, shell=True)
-            run_command("sudo chmod g+rwxs " + pl_dir, shell=True)
+        #scriptuserid = os.getuid()
+        # not needed any more since we run mpd as user
+        # if not scriptuserid:  # Script läuft nicht als 'root'
+        #     # Scriptuser sollte im Normalfall der User 'pi' sein
+        #     scriptuser = pwd.getpwuid(scriptuserid).pw_name
+        #     if not scriptuser in grp.getgrnam('audio').gr_mem:
+        #         # Der Scriptuser sollte Mitglied der Gruppe 'audio' sein
+        #         run_command("sudo usermod -a -G audio " + scriptuser, shell=True)
+        # if os.path.isdir(pl_dir):
+        #     # Mache das mpd Playlisten Verzeichnis für
+        #     # die Gruppe 'audio' beschreibbar
+        #     run_command("sudo chgrp audio " + pl_dir, shell=True)
+        #     run_command("sudo chmod g+rwxs " + pl_dir, shell=True)
 
         # Versuche die Beispiel-Radio-Playlisten ins
         # mpd Playlisten Verzeichnis zu kopieren
@@ -2216,7 +2227,7 @@ def main():
                     pass
                 except socket.timeout as e:
                     print((str(e) + "\nRestarting mpd..."))
-                    run_command("sudo service mpd restart", shell=True)
+                    mpd_restart()
                     Refresh = True
                     Dirty = True
                     pygame.time.wait(1500)
