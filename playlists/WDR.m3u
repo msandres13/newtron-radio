@@ -1,0 +1,33 @@
+#EXTM3U
+#EXTINF:-1,1live
+http://wdr-1live-live.icecast.wdr.de/wdr/1live/live/mp3/128/stream.mp3
+#EXTINF:-1,1Livediggi
+http://wdr-1live-diggi.icecast.wdr.de/wdr/1live/diggi/mp3/128/stream.mp3
+#EXTINF:-1,1LIVE Plan B
+http://wdr-1live-planb.icecast.wdr.de/wdr/1live/planb/mp3/128/stream.mp3
+#EXTINF:-1,1LIVE DJ Session
+http://wdr-1live-djsession.icecast.wdr.de/wdr/1live/djsession/mp3/128/stream.mp3
+#EXTINF:-1,1LIVE Neu für den Sektor
+http://wdr-1live-neufuerdensektor.icecast.wdr.de/wdr/1live/neufuerdensektor/mp3/128/stream.mp3
+#EXTINF:-1,1LIVE Hip Hop
+http://wdr-1live-hiphop.icecast.wdr.de/wdr/1live/hiphop/mp3/128/stream.mp3
+#EXTINF:-1,1LIVE Specials
+http://wdr-1live-specials.icecast.wdr.de/wdr/1live/specials/mp3/128/stream.mp3
+#EXTINF:-1,1LIVE Fiehe
+http://wdr-1live-fiehe.icecast.wdr.de/wdr/1live/fiehe/mp3/128/stream.mp3
+#EXTINF:-1,WDR 2 Rheinland aktuell
+http://wdr-wdr2-rheinland.icecast.wdr.de/wdr/wdr2/rheinland/mp3/128/stream.mp3
+#EXTINF:-1,WDR 3
+http://wdr-wdr3-live.icecast.wdr.de/wdr/wdr3/live/mp3/128/stream.mp3
+#EXTINF:-1,WDR 4
+http://wdr-wdr4-live.icecast.wdr.de/wdr/wdr4/live/mp3/128/stream.mp3
+#EXTINF:-1,WDR 5
+http://wdr-wdr5-live.icecast.wdr.de/wdr/wdr5/live/mp3/128/stream.mp3
+#EXTINF:-1,Cosmo
+http://wdr-cosmo-live.icecast.wdr.de/wdr/cosmo/live/mp3/128/stream.mp3
+#EXTINF:-1,KiRaKa
+http://wdr-kiraka-live.icecast.wdr.de/wdr/kiraka/live/mp3/128/stream.mp3
+#EXTINF:-1,WDR Event
+http://wdr-wdr-event.icecast.wdr.de/wdr/wdr/event/mp3/128/stream.mp3
+#EXTINF:-1,WDR Verkehrskanal
+http://wdr-vera-live.icecast.wdr.de/wdr/vera/live/mp3/128/stream.mp3

@@ -1,0 +1,9 @@
+ACHTUNG!!!
+
+Änderungen hier haben keine Auswirkungen, wenn das Radio
+bereits einmal gestartet wurde.
+
+Wenn Sie die Playlisten ändern, neu anlegen oder löschen
+wollen, dann bitte nur unter /var/lib/mpd/playlists.
+
+ACHTUNG!!!

@@ -1,0 +1,19 @@
+#EXTM3U
+#EXTINF:-1,hr1
+http://hr-hr1-live.cast.addradio.de/hr/hr1/live/mp3/128/stream.mp3
+#EXTINF:-1,hr2
+http://hr-hr2-live.cast.addradio.de/hr/hr2/live/mp3/128/stream.mp3
+#EXTINF:-1,hr3
+http://hr-hr3-live.cast.addradio.de/hr/hr3/live/mp3/128/stream.mp3
+#EXTINF:-1,hr4
+http://hr-hr4-live.cast.addradio.de/hr/hr4/live/mp3/128/stream.mp3
+#EXTINF:-1,hr-INFO
+http://hr-hrinfo-live.cast.addradio.de/hr/hrinfo/live/mp3/128/stream.mp3
+#EXTINF:-1,youfm
+http://hr-youfm-live.cast.addradio.de/hr/youfm/live/mp3/128/stream.mp3
+#EXTINF:-1,youfm Just Music
+http://hr-youfm-justmusic.cast.addradio.de/hr/youfm/justmusic/mp3/128/stream.mp3
+#EXTINF:-1,youfm Sounds
+http://hr-youfm-sounds.cast.addradio.de/hr/youfm/sounds/mp3/128/stream.mp3
+#EXTINF:-1,youfm Club
+http://hr-youfm-club.cast.addradio.de/hr/youfm/club/mp3/128/stream.mp3

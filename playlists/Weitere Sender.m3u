@@ -1,0 +1,13 @@
+#EXTM3U
+#EXTINF:-1,RPR1
+https://streams.rpr1.de/rpr-simulcast-128-mp3?usid=0-0-H-M-D-01
+#EXTINF:-1,Harmony.FM
+http://mp3.harmonyfm.de/harmonyfm/hqlivestream.mp3
+#EXTINF:-1,Harmony.FM Schlager
+http://mp3.harmonyfm.de/hrmchannels/hqschlager.mp3
+#EXTINF:-1,egoFM
+http://egofm-live.cast.addradio.de/egofm/live/mp3/high/stream.mp3?ar-distributor=ffa0
+#EXTINF:-1,Antenne Frankfurt
+http://mp3ad.antennefrankfurt.c.nmdn.net/fs_antennefrankfurt/livestream.mp3
+#EXTINF:-1,Klassik Radio
+http://klassikr.streamabc.net/klassikradio-simulcast-mp3-hq

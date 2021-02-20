@@ -1,0 +1,13 @@
+#EXTM3U
+#EXTINF:-1,SWR1 Rheinland-Pfalz
+http://swr-swr1-rp.cast.addradio.de/swr/swr1/rp/mp3/128/stream.mp3
+#EXTINF:-1,SWR2
+http://swr-swr2-live.cast.addradio.de/swr/swr2/live/mp3/256/stream.mp3
+#EXTINF:-1,SWR3-Livestream
+http://swr-swr3-live.cast.addradio.de/swr/swr3/live/mp3/128/stream.mp3
+#EXTINF:-1,SWR4 Rheinland-Pfalz
+http://swr-swr4-rp.cast.addradio.de/swr/swr4/rp/mp3/128/stream.mp3
+#EXTINF:-1,DASDING-Livestream
+http://swr-dasding-live.cast.addradio.de/swr/dasding/live/mp3/128/stream.mp3
+#EXTINF:-1,SWR Aktuell
+http://swr-swraktuell-live.cast.addradio.de/swr/swraktuell/live/mp3/128/stream.mp3

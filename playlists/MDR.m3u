@@ -1,0 +1,41 @@
+#EXTM3U
+#EXTINF:-1,MDR Aktuell
+http://mdr-284340-0.cast.mdr.de/mdr/284340/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR Klassik
+http://mdr-284350-0.cast.mdr.de/mdr/284350/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR Kultur
+http://mdr-284310-0.cast.mdr.de/mdr/284310/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR Kultur Figarino
+http://mdr-284311-2.cast.mdr.de/mdr/284311/2/mp3/high/stream.mp3
+#EXTINF:-1,MDR Kultur- Folk im Konzert
+http://mdr-284311-1.cast.mdr.de/mdr/284311/1/mp3/high/stream.mp3
+#EXTINF:-1,MDR Kultur- Klassik im Konzert
+http://mdr-284311-0.cast.mdr.de/mdr/284311/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR JUMP
+http://mdr-284320-0.cast.mdr.de/mdr/284320/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR JUMP In the Mix
+http://mdr-284321-2.cast.mdr.de/mdr/284321/2/mp3/high/stream.mp3
+#EXTINF:-1,MDR JUMP Rock
+http://mdr-284321-1.cast.mdr.de/mdr/284321/1/mp3/high/stream.mp3
+#EXTINF:-1,MDR JUMP Trend
+http://mdr-284321-0.cast.mdr.de/mdr/284321/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR Thüringen
+http://mdr-284300-0.cast.mdr.de/mdr/284300/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR Schlagerwelt Thüringen
+http://mdr-990601-0.cast.mdr.de/mdr/990601/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Black-Channel
+http://mdr-284331-0.cast.mdr.de/mdr/284331/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Club-Channel
+http://mdr-284331-2.cast.mdr.de/mdr/284331/2/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Insomnia-Channel
+http://mdr-284331-3.cast.mdr.de/mdr/284331/3/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK OnAir Channel
+http://mdr-284330-0.cast.mdr.de/mdr/284330/0/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Popkult-Channel
+http://mdr-284331-4.cast.mdr.de/mdr/284331/4/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Roboton-Channel
+http://mdr-284331-5.cast.mdr.de/mdr/284331/5/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Rock-Channel
+http://mdr-284331-1.cast.mdr.de/mdr/284331/1/mp3/high/stream.mp3
+#EXTINF:-1,MDR SPUTNIK Soundcheck-Channel
+http://mdr-284331-6.cast.mdr.de/mdr/284331/6/mp3/high/stream.mp3

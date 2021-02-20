@@ -1,0 +1,23 @@
+#EXTM3U
+#EXTINF:-1,HIT RADIO FFH
+http://mp3.ffh.de/radioffh/hqlivestream.mp3
+#EXTINF:-1,FFH ITUNES TOP 40
+http://mp3.ffh.de/ffhchannels/hqtop40.mp3
+#EXTINF:-1,FFH DIE 80ER
+http://mp3.ffh.de/ffhchannels/hq80er.mp3
+#EXTINF:-1,FFH EURODANCE
+http://mp3.ffh.de/ffhchannels/hqeurodance.mp3
+#EXTINF:-1,FFH SOUNDTRACK
+http://mp3.ffh.de/ffhchannels/hqsoundtrack.mp3
+#EXTINF:-1,FFH SCHLAGER
+http://mp3.ffh.de/ffhchannels/hqschlager.mp3
+#EXTINF:-1,FFH ROCK
+http://mp3.ffh.de/ffhchannels/hqrock.mp3
+#EXTINF:-1,FFH JUST 90S
+http://mp3.ffh.de/ffhchannels/hq90er.mp3
+#EXTINF:-1,FFH PARTY
+http://mp3.ffh.de/ffhchannels/hqparty.mp3
+#EXTINF:-1,FFH LOUNGE
+http://mp3.ffh.de/ffhchannels/hqlounge.mp3
+#EXTINF:-1,FFH WEIHNACHTSRADIO
+http://mp3.ffh.de/ffhchannels/hqxmas.mp3

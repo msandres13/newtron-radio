@@ -1,0 +1,19 @@
+#EXTM3U
+#EXTINF:-1,BAYERN 1 Franken
+http://br-br1-franken.cast.addradio.de/br/br1/franken/mp3/128/stream.mp3
+#EXTINF:-1,BAYERN 2 Nord
+http://br-br2-nord.cast.addradio.de/br/br2/nord/mp3/128/stream.mp3
+#EXTINF:-1,BAYERN 3
+http://br-br3-live.cast.addradio.de/br/br3/live/mp3/128/stream.mp3
+#EXTINF:-1,BR-Klassik
+http://br-brklassik-live.cast.addradio.de/br/brklassik/live/mp3/128/stream.mp3
+#EXTINF:-1,B5 aktuell
+http://br-b5aktuell-live.cast.addradio.de/br/b5aktuell/live/mp3/128/stream.mp3
+#EXTINF:-1,B5 plus
+http://br-b5plus-live.cast.addradio.de/br/b5plus/live/mp3/128/stream.mp3
+#EXTINF:-1,Bayern Plus
+http://br-bayernplus-live.cast.addradio.de/br/bayernplus/live/mp3/128/stream.mp3
+#EXTINF:-1,BR Heimat
+http://br-brheimat-live.cast.addradio.de/br/brheimat/live/mp3/128/stream.mp3
+#EXTINF:-1,Puls
+http://br-puls-live.cast.addradio.de/br/puls/live/mp3/128/stream.mp3
