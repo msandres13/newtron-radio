@@ -3,6 +3,12 @@ Additional changes:
 - use systemd --user for mpc (not complete yet)
 - add rpm/deb build so newtron-radio can be installed easily
 
+
+python3 ./setup.py clean
+python3 ./setup.py bdist_rpm
+
+
+
 Dies ist eine stark modifizierte Version des Ursprünglich von 5Volt-Junkie
 auf https://github.com/5Volt-Junkie/RPi-Tron-Radio veröffentlichen Projektes.
 

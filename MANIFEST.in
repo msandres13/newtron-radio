@@ -1,0 +1,4 @@
+include LICENSE
+include README.txt
+recursive-include playlists *
+recursive-include skins *
