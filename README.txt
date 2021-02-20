@@ -5,9 +5,16 @@ Additional changes:
 
 
 python3 ./setup.py clean
-python3 ./setup.py bdist_rpm
+python3 ./setup.py bdist_rpm --requires mpd
 
+# check
+rpm -qp dist/newtron-radio-1.0-1.noarch.rpm --requires
 
+# install
+sudo rpm -ihv dist/newtron-radio-1.0-1.noarch.rpm
+
+# run
+python3 /usr/lib/python3.8/site-packages/newtron-radio.py
 
 Dies ist eine stark modifizierte Version des Ursprünglich von 5Volt-Junkie
 auf https://github.com/5Volt-Junkie/RPi-Tron-Radio veröffentlichen Projektes.
