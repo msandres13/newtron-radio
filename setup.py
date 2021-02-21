@@ -6,17 +6,18 @@ name = 'newtron-radio'
 
 
 CLASSIFIERS = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Multimedia :: Sound/Audio :: Players",
 ]
 
-LICENSE = """\The MIT License (MIT)
+LICENSE = """MIT License
+The MIT License (MIT)
 
 Copyright (c) 2014 5Volt-Junkie
 
@@ -47,7 +48,9 @@ setup(name=name,
       author='Michael Andres',
       author_email='newtron-radio@andres.one',
       python_requires='>=3.6',
-      long_description='Test release, not fully working yet',
+      #long_description='Test release, not fully working yet',
+      long_description=open('README.md').read(),
+      long_description_content_type='text/markdown',
       #long_description=open('README.txt').read(),
       classifiers=CLASSIFIERS,
       license=LICENSE,
@@ -57,7 +60,7 @@ setup(name=name,
           'python-mpd2',
           'pygame',
           'svg'
-      ]
+      ],
 #       entry_points="""
 # # -*- Entry points: -*-
 # """
