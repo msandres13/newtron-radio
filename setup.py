@@ -40,13 +40,14 @@ SOFTWARE.
 """
 
 setup(name=name,
-      version=1.0,
+      version=0.0,
       py_modules=['newtron-radio'],
       description='Internet Radio for Raspberrypi',
       url='https://github.com/msandres13/newtron-radio',
       author='Michael Andres',
       author_email='newtron-radio@andres.one',
       python_requires='>=3.6',
+      long_description='Test release, not fully working yet',
       #long_description=open('README.txt').read(),
       classifiers=CLASSIFIERS,
       license=LICENSE,
