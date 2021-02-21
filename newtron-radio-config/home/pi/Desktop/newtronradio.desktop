@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Link
+Name=NewTron Radio
+Icon=newtronradio
+URL=/usr/share/applications/newtronradio.desktop
+Terminal=true
+X-KeepTerminal=true

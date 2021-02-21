@@ -16,6 +16,8 @@ import re
 import shutil
 import socket
 import subprocess
+from pwd import getpwnam
+import getpass
 from mpd import MPDClient, CommandError, ConnectionError
 import pygame
 import svg
@@ -63,7 +65,7 @@ WLAN_DEVICE = 'wlan0'
 
 ###### Playlistenmanagement ################################
 # Vollständiger Pfad zur mpd.conf
-MPD_CONFIG = '/etc/mpd.conf'
+MPD_CONFIG = '~/.mpdconf'
 DEFAULTPLAYLIST = 'Radio BOB!'  # eine Playlist aus dem 'playlist_directory'
 SORT_PLAYLISTS = True
 
@@ -251,8 +253,11 @@ def draw_text(win, text, font, color, align='topleft', pos=(0, 0)):
 
 
 def mpd_connect(client):
+    user_name = getpass.getuser()
+    user_id = getpwnam(user_name).pw_uid
+    mpdsocket = "/var/run/user/" + str(user_id) + "/mpd/socket"
     try:
-        client.connect("localhost", "6600")
+        client.connect(mpdsocket)
         print("connected using unix socket...")
     except ConnectionError as err:
         if 'Already connected' in str(err):
@@ -264,8 +269,7 @@ def mpd_connect(client):
             try:
                 client.disconnect()
                 pygame.time.wait(1500)
-                client.connect("/var/run/mpd/socket")
-                # mpd_connect(client)
+                client.connect(mpdsocket)
                 print("connected using unix socket...")
             except socket.error as err:
                 print('Zeile 246:', str(err))
@@ -1961,10 +1965,10 @@ class Screen:
 ##### Ende der Funktions- und Klassendefinitionen ##########
 
 def main():
-    print("Hello World!")
-    global WIDTH, HEIGHT, LCD, MSG_WIN, CHK_WIN, btn, STATUS_WIN, SS_WEATHER_WIN, SS_WEATHER_RECT, WEATHERPATH, MPC,\
-        LIST_WIN, BITRATE_WIN, SKINBASE, BTN_WIN, LIST_WIN, STATION_WIN, ARTIST_WIN, TITLE_WIN, BTN_RECT, SS_TITLE_WIN,\
-        SS_CLOCK_WIN, SS_TITLE_RECT, SS_CLOCK_RECT, PLS, PLUS_RECT, POS, SCR, CHK_RECT, STATUS_RECT, BITRATE_RECT,\
+    print("starting newtron-radio")
+    global WIDTH, HEIGHT, LCD, MSG_WIN, CHK_WIN, btn, STATUS_WIN, SS_WEATHER_WIN, SS_WEATHER_RECT, WEATHERPATH, MPC, \
+        LIST_WIN, BITRATE_WIN, SKINBASE, BTN_WIN, LIST_WIN, STATION_WIN, ARTIST_WIN, TITLE_WIN, BTN_RECT, SS_TITLE_WIN, \
+        SS_CLOCK_WIN, SS_TITLE_RECT, SS_CLOCK_RECT, PLS, PLUS_RECT, POS, SCR, CHK_RECT, STATUS_RECT, BITRATE_RECT, \
         PLUS_WIN, WTR, MINUTES
     # Initialisiere das Display und ermittle die Dimensionen
     WIDTH, HEIGHT = disp_init()

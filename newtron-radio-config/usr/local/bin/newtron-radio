@@ -1,0 +1,3 @@
+#!/bin/bash
+NEWTRON=/usr/local/lib/newtron-v3
+exec $NEWTRON/newtron_radio.py

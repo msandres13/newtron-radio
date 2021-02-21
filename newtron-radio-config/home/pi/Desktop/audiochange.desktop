@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=audiochange
+Comment=mpd neu starten
+Icon=/usr/share/pixmaps/lxterminal.xpm
+Exec=sh -c "sudo cp ~/.asoundrc /etc/asound.conf && systemctl --user restart mpd && mpc play"
+Type=Application
+Encoding=UTF-8
+Terminal=false
+Categories=None;

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+Exec=/usr/local/bin/newtron-radio
+Icon=newtronradio
+Name=NewTron Radio
+Categories=AudioVideo;Audio;Player;Multimedia;

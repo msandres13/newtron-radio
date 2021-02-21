@@ -5,7 +5,7 @@ Additional changes:
 
 
 python3 ./setup.py clean
-python3 ./setup.py bdist_rpm --requires mpd
+python3 ./setup.py bdist_rpm --requires mpd mpc
 
 # check
 rpm -qp dist/newtron-radio-1.0-1.noarch.rpm --requires
