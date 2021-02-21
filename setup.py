@@ -47,7 +47,7 @@ setup(name=name,
       author='Michael Andres',
       author_email='newtron-radio@andres.one',
       python_requires='>=3.6',
-      long_description=open('README.txt').read(),
+      #long_description=open('README.txt').read(),
       classifiers=CLASSIFIERS,
       license=LICENSE,
       # data files in MANIFEST.in
