@@ -400,7 +400,7 @@ def set_config(idx=None):
     return True
 
 
-def read_skin_config(skin_path: str):
+def read_skin_config(skin_path):
     # Default-Farben
     colors['font'] = (0, 150, 200)
     colors['bg'] = (0, 0, 0)

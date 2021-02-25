@@ -13,6 +13,10 @@ rpm -qp dist/newtron-radio-1.0-1.noarch.rpm --requires
 # install
 sudo rpm -ihv dist/newtron-radio-1.0-1.noarch.rpm
 
+pip install svg pygame
+
+
+
 # run
 python3 /usr/lib/python3.8/site-packages/newtron-radio.py
 
