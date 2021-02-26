@@ -124,7 +124,7 @@ def pi_restart():
 
 def mpd_restart():
     print('restart mpd service')
-    subprocess.call("service --user mpd restart", shell=True)
+    subprocess.call("systemctl --user restart mpd", shell=True)
 
 
 def run_command(cmd, shell):
